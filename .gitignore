@@ -176,3 +176,4 @@ documentation/
 plans/
 **/.obsidian
 obsidian-scripts/
+**/env.dev.yaml
