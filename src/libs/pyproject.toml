@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "ticketmaster-libs"
+version = "0.0.1"
+description = "Shared library for the ticketmaster service"
+authors = ["Aleksei Sosov <forgithublesh@yandex.ru>"]
+packages = [{ include = "libs" }]
+
+[tool.poetry.dependencies]
+python = "^3.14"
+sqlmodel = "^0.0.38"
+alembic = "^1.18.4"
+asyncpg = "^0.31.0"
+psycopg = "^3.3.3"
+psycopg-binary = "^3.3.3"
+greenlet = "^3.4.0"
+pydantic = "^2.13.1"
+pydantic-settings = "^2.13.1"
+pyyaml = "^6.0.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

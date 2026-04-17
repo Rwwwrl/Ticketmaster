@@ -1,0 +1,70 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check_versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check versions for changed packages
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth=1
+
+          packages="libs ticketmaster"
+          for pkg in $packages; do
+            if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^src/${pkg}/"; then
+              if ! git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^src/${pkg}/pyproject.toml$"; then
+                echo "::error::${pkg} code changed but pyproject.toml version was not updated"
+                exit 1
+              fi
+
+              if BASE_TOML=$(git show origin/${{ github.base_ref }}:src/${pkg}/pyproject.toml 2>/dev/null); then
+                BASE_VERSION=$(echo "$BASE_TOML" | grep '^version = ' | head -1 | sed 's/version = "\(.*\)"/\1/')
+                HEAD_VERSION=$(grep '^version = ' src/${pkg}/pyproject.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+
+                if [[ "$HEAD_VERSION" == "$BASE_VERSION" ]]; then
+                  echo "::error::${pkg}/pyproject.toml version was not bumped ($BASE_VERSION -> $HEAD_VERSION)"
+                  exit 1
+                fi
+
+                echo "${pkg}: $BASE_VERSION -> $HEAD_VERSION"
+              else
+                echo "${pkg}: new package, skipping version comparison"
+              fi
+            else
+              echo "No ${pkg} changes detected"
+            fi
+          done
+
+  lint_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+
+      - name: Install Poetry
+        run: pip install poetry==1.8.3
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Run linter
+        run: poetry run ruff check .
+
+      - name: Check formatting
+        run: poetry run ruff format --check .
+
+      - name: Run tests
+        run: poetry run pytest
