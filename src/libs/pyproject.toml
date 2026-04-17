@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ticketmaster-libs"
-version = "0.0.1"
+version = "0.1.0"
 description = "Shared library for the ticketmaster service"
 authors = ["Aleksei Sosov <forgithublesh@yandex.ru>"]
 packages = [{ include = "libs" }]
