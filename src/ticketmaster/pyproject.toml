@@ -11,6 +11,8 @@ ticketmaster-libs = "^0.0.1"
 ruff = "^0.15.10"
 pytest = "^9.0.3"
 pytest-asyncio = "^1.3.0"
+fastapi = "^0.136.0"
+uvicorn = "^0.44.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -18,4 +20,5 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "session"
-testpaths = ["tests"]
+addopts = "--import-mode=importlib"
+testpaths = ["ticketmaster/tests"]
