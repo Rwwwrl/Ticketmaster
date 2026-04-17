@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "ticketmaster"
-version = "0.0.1"
+version = "0.1.0"
 description = "Ticketmaster monolith service"
 authors = ["Aleksei Sosov <forgithublesh@yandex.ru>"]
 packages = [{ include = "ticketmaster" }]
 
 [tool.poetry.dependencies]
 python = "^3.14"
-ticketmaster-libs = "^0.0.1"
+ticketmaster-libs = "^0.1.0"
 ruff = "^0.15.10"
 pytest = "^9.0.3"
 pytest-asyncio = "^1.3.0"
