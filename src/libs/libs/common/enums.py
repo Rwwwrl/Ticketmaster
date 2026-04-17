@@ -8,5 +8,9 @@ class EnvironmentEnum(StrEnum):
     CICD = auto()
 
 
+class AppNameEnum(StrEnum):
+    TICKETMASTER = auto()
+
+
 class ServiceNameEnum(StrEnum):
     TICKETMASTER = auto()
