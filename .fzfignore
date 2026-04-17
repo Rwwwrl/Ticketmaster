@@ -1,0 +1,7 @@
+**/__pycache__
+**/.pytest_cache
+**/*.pyc
+**.obsidian
+obsidian-scripts
+**/.ruff_cache
+**/.venv

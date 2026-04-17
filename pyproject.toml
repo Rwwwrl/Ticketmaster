@@ -17,10 +17,16 @@ ticketmaster = {path = "src/ticketmaster", develop = true}
 pre-commit = "^4.5.1"
 pytest-cov = "^5.0.0"
 ipython = "^8.0.0"
+pytest-env = "^1.6.0"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "session"
-testpaths = ["src/ticketmaster/tests"]
+addopts = "--import-mode=importlib -p libs.tests_ext.sqlmodel_fixtures"
+env = [
+    "ENVIRONMENT=cicd",
+    "POSTGRES_DB_URL=postgresql+asyncpg://postgres:postgres@localhost:15432/postgres",
+]
+testpaths = ["src/libs/libs/tests", "src/ticketmaster/ticketmaster/tests"]
 
 [tool.ruff]
 exclude = [
