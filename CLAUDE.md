@@ -2,6 +2,65 @@
 
 Ticketmaster is an online platform where anyone can browse and book tickets to live events — sport games, concerts, and theater shows.
 
+## Service Internal Architecture
+
+Ticketmaster is a single deployable service at `src/ticketmaster/`. Shared infrastructure lives in `src/libs/` as a separate Poetry package.
+
+The top-level split inside the service is by **communication protocol** (`http/`, `grpc/`, `background_tasks/`), not by technical layer. Each protocol folder has its own `main.py` with protocol-specific setup (FastAPI app, broker config, etc.). Shared domain code — models, repositories, schemas, settings — lives at the service root and is accessible from all protocol folders.
+
+Not every protocol folder exists yet. Today only `http/` is in use; `grpc/` and `background_tasks/` are planned.
+
+### Service Module Structure
+
+```
+ticketmaster/
+    settings.py              # Service configuration (shared across protocols)
+    utils.py                 # Shared utilities (e.g., engine init)
+    models.py                # Database models (flat — no per-aggregate folders)
+    enums.py                 # Enum classes (flat)
+    repositories.py          # Data access layer (shared)
+    schemas/
+        dtos.py              # Shared DTOs
+    http/
+        __init__.py
+        main.py              # FastAPI app, lifespan, middleware
+        routes.py            # API endpoints (FastAPI router)
+        schemas/
+            request_schemas.py
+            response_schemas.py
+    grpc/                    # Future — gRPC protocol support
+        __init__.py
+        main.py
+    background_tasks/        # Future — background tasks (TaskIQ + RabbitMQ)
+        __init__.py
+        main.py              # Broker setup, worker lifecycle
+        tasks.py             # Task definitions
+```
+
+Additional common files (add as needed): `serializers.py`, `exceptions.py`.
+
+Keep the domain layer flat. Do not split `models.py` / `enums.py` into per-aggregate folders.
+
+### Layer Dependency Direction
+
+```
+http/routes.py  →  services.py  →  repositories.py  →  models.py
+    |                  |                  |
+    v                  v                  v
+http/schemas/       schemas/           schemas/
+  request            dtos               dtos
+  response                              nested_models
+    |
+    v
+serializers.py  (DTO → response_schemas)
+```
+
+Routes depend on services, services depend on repositories, repositories depend on models. Schemas are used across layers. Never import routes from services or repositories.
+
+### Shared Library
+
+`src/libs/` is a separate Poetry package (`ticketmaster-libs`) with shared code. The service depends on it via path dependency: `ticketmaster-libs = { path = "../libs", develop = true }`.
+
 ## Development
 
 **Python version:** 3.14
