@@ -26,42 +26,7 @@ Examples: `test_readiness_check_when_db_unreachable`, `test_request_id_middlewar
 
 ## File Structure
 
-The `tests/` directory lives **inside** the Python package (next to the source modules), not alongside it. Tests mirror source structure — for every `pkg/foo/bar.py` there is a `pkg/tests/foo/test_bar.py`. No `__init__.py` files (importlib mode).
-
-```
-src/libs/
-└── libs/
-    ├── fastapi_ext/
-    │   └── middlewares/
-    │       ├── request_id.py
-    │       └── security_headers.py
-    └── tests/
-        └── fastapi_ext/
-            └── middlewares/
-                ├── test_request_id.py
-                └── test_security_headers.py
-
-src/ticketmaster/
-└── ticketmaster/
-    ├── http/
-    │   └── main.py
-    ├── models.py
-    └── tests/
-        ├── conftest.py
-        └── http/
-            └── test_main.py
-```
-
-Both test roots are registered from the workspace root `pyproject.toml`:
-
-```toml
-[tool.pytest.ini_options]
-asyncio_default_fixture_loop_scope = "session"
-addopts = "--import-mode=importlib"
-testpaths = ["src/libs/libs/tests", "src/ticketmaster/ticketmaster/tests"]
-```
-
-When running pytest from inside a single package (e.g. `cd src/ticketmaster && poetry run pytest`), that package's own `pyproject.toml` points at its local `ticketmaster/tests`.
+Tests mirror source structure: for every `pkg/foo/bar.py` there is a `pkg/tests/foo/test_bar.py`. `tests/` lives **inside** the Python package (next to the source modules), not alongside it. No `__init__.py` files — tests run under `--import-mode=importlib`.
 
 Run from the project root: `poetry run pytest`.
 
@@ -72,125 +37,31 @@ Run from the project root: `poetry run pytest`.
 - `@pytest_asyncio.fixture(scope="session")` for async fixtures (not `@pytest.fixture`)
 - `--import-mode=importlib` — no `__init__.py` in test dirs
 
-## conftest Patterns
+## Conftest Patterns
 
-### Self-contained test file (libs pattern)
+Two patterns depending on what the tests touch:
 
-For middleware / unit tests with no shared conftest, define fixtures inline. This is the style used by the existing `src/libs/tests/test_*_middleware.py` files.
+- **Self-contained inline fixtures.** Middleware and other unit-style tests build a minimal `FastAPI` app and `async_client` directly inside the test file. There is no shared conftest for `libs` tests.
+- **Service conftest with DB.** Tests that exercise the service against Postgres share a `conftest.py` at the service tests root. It supplies `settings`, `autocleared_sqlmodel_tables`, `fastapi_app`, and `async_client`.
 
-```python
-from collections.abc import AsyncGenerator
+## DB Test Infrastructure
 
-import pytest
-import pytest_asyncio
-from fastapi import APIRouter, FastAPI
-from httpx import ASGITransport, AsyncClient
+For tests that touch Postgres, the shared plugin `libs.tests_ext.sqlmodel_fixtures` (loaded via `-p` in the root `pyproject.toml`) provides:
 
-from libs.fastapi_ext.middlewares import SecurityHeadersMiddleware
+- `sqlmodel_engine` (session scope) — creates/drops a dedicated `test` database and runs `create_all`.
+- `_clear_sqlmodel_tables` (autouse) — `TRUNCATE`s tables after each test.
 
+The service conftest must provide:
 
-@pytest.fixture(scope="session")
-def app() -> FastAPI:
-    test_app = FastAPI()
-    test_app.add_middleware(SecurityHeadersMiddleware)
+- `settings` (session) — a `PostgresSettingsMixin` instance.
+- `autocleared_sqlmodel_tables` (session) — `list[type[BaseSqlModel]]` for the plugin to truncate. List child tables before parents so `TRUNCATE ... CASCADE` is predictable.
+- `fastapi_app` (session) — a **test-only** `FastAPI` instance with just the routers under test. Do not import the prod `app` — its lifespan runs at import time and couples tests to the full middleware stack.
 
-    router = APIRouter()
-
-    @router.get("/test")
-    async def test_endpoint() -> dict[str, str]:
-        return {"status": "ok"}
-
-    test_app.include_router(router=router)
-    return test_app
-
-
-@pytest_asyncio.fixture(scope="session")
-async def async_client(app: FastAPI) -> AsyncGenerator[AsyncClient]:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        yield client
-
-
-@pytest.mark.asyncio(loop_scope="session")
-async def test_security_headers_when_success_adds_nosniff(async_client: AsyncClient) -> None:
-    response = await async_client.get(url="/test")
-    assert response.headers["X-Content-Type-Options"] == "nosniff"
-```
-
-### DB integration conftest (service app)
-
-Tests that touch Postgres must run against a **dedicated throwaway database**, not `postgres_db_url`'s target — otherwise they'd mutate dev data. The reusable `sqlmodel_engine` fixture lives in the shared plugin `libs.tests_ext.sqlmodel_fixtures`, loaded from the root `pyproject.toml`:
-
-```toml
-[tool.pytest.ini_options]
-addopts = "--import-mode=importlib -p libs.tests_ext.sqlmodel_fixtures"
-```
-
-The plugin (`src/libs/libs/tests_ext/sqlmodel_fixtures.py`) does the full life cycle per session:
-
-1. Connects to the `postgres` admin database, runs `DROP DATABASE IF EXISTS test` + `CREATE DATABASE test`.
-2. Builds an engine against the fresh `test` DB, wires `Session.configure(bind=engine)`.
-3. Runs `BaseSqlModel.metadata.create_all` to build the schema.
-4. Yields the engine.
-5. On teardown: disposes the engine, reconnects as admin, `DROP DATABASE test`.
-
-It also ships an autouse `_clear_sqlmodel_tables` fixture that TRUNCATEs the service's tables after each test when the service provides an `autocleared_sqlmodel_tables` fixture.
-
-The service conftest supplies three session-scoped fixtures: `settings` (any `PostgresSettingsMixin`) and `autocleared_sqlmodel_tables` (the tables to wipe between tests) are consumed by the plugin; `fastapi_app` builds a **test-only FastAPI instance** that includes just the routers under test. Do **not** import the real `app` from `ticketmaster.http.main` into tests — the prod app runs its lifespan at import time, couples tests to the full middleware stack, and hits the real DB URL.
-
-The conftest also imports the service's models module so `BaseSqlModel.metadata` is populated before `create_all` runs. See `src/ticketmaster/ticketmaster/tests/conftest.py`:
-
-```python
-from collections.abc import AsyncGenerator
-
-import pytest
-import pytest_asyncio
-from fastapi import FastAPI
-from httpx import ASGITransport, AsyncClient
-from libs.sqlmodel_ext import BaseSqlModel
-from sqlalchemy.ext.asyncio import AsyncEngine
-
-from ticketmaster.http.v1 import v1_router
-from ticketmaster.models import Event, Ticket, User
-from ticketmaster.settings import Settings
-from ticketmaster.settings import settings as ticketmaster_settings
-
-
-@pytest.fixture(scope="session")
-def settings() -> Settings:
-    return ticketmaster_settings
-
-
-@pytest.fixture(scope="session")
-def autocleared_sqlmodel_tables() -> list[type[BaseSqlModel]]:
-    return [Ticket, User, Event]
-
-
-@pytest_asyncio.fixture(scope="session")
-async def fastapi_app(sqlmodel_engine: AsyncEngine) -> AsyncGenerator[FastAPI]:
-    app = FastAPI()
-    app.state.sqlmodel_engine = sqlmodel_engine
-    app.include_router(router=v1_router, prefix="/v1")
-    yield app
-
-
-@pytest_asyncio.fixture(scope="session")
-async def async_client(fastapi_app: FastAPI) -> AsyncGenerator[AsyncClient]:
-    transport = ASGITransport(app=fastapi_app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        yield client
-```
-
-Notes:
-- `httpx.ASGITransport` does **not** run the app's lifespan. `Session.configure(bind=engine)` inside the plugin replaces what `http/main.py::lifespan` does for the DB; the `fastapi_app` fixture attaches the engine to `app.state` the same way the real lifespan does.
-- `/health` and `/readiness_check` live on the prod app in `http/main.py` and are deliberately not included in the test app — they're trivial liveness probes, not business logic.
-- Postgres must be up (`just up-infra`) — the plugin talks to the real server and creates/drops the `test` database.
-- `_clear_sqlmodel_tables` quotes table names so reserved words like `"user"` work.
-- Ordering inside `autocleared_sqlmodel_tables` matters for FK dependencies: list child tables before their parents so TRUNCATE CASCADE behaves predictably.
+Postgres must be up (`just up-infra`) before running DB tests.
 
 ## Response Validation
 
-Use Pydantic schemas to validate responses, not raw dicts:
+Validate responses with Pydantic schemas, not raw dicts:
 
 ```python
 response = await async_client.get(url="/v1/events/")
@@ -200,26 +71,25 @@ content = EventListResponseSchema(**response.json())
 
 ## Mock Patterns
 
-Full recipes in [references/mocks.md](references/mocks.md). Quick summary:
+See [references/mocks.md](references/mocks.md) for `patch`, `AsyncMock`, `side_effect`, parenthesized multi-patch, and argument assertions.
 
-- Configure mocks in the `patch()` call — never mutate them after creation.
-- Use `new_callable=AsyncMock` for async targets.
-- Multiple patches: parenthesized `with (patch(...), patch(...)):`.
-- Assert with `.assert_called_once()` + `.call_args.kwargs[...]`.
+## What's Convenient
+
+- `httpx.AsyncClient` + `ASGITransport` hits the app in-process — no network, no server.
+- Session-scoped fixtures build the app/client once per suite, so the cost is paid upfront.
+- The DB plugin handles the full `test` database lifecycle and per-test cleanup; service conftest only declares which tables to wipe.
+- `caplog` works for log-based assertions without extra setup.
+- DB assertions can open `Session()` directly — no need to round-trip through the API.
 
 ## Conventions
 
-| Rule | Detail |
-|------|--------|
-| Return types | Always annotate (`-> None`, `-> AsyncGenerator[AsyncClient]`) |
-| Keyword args | Always use (`url=`, `json=`, `headers=`, `router=`) |
-| Internal fixtures | Prefix with `_` (e.g. `_clear_sqlmodel_tables`) |
-| Line length | E501 ignored under `**/tests/**/*` (already set in root `pyproject.toml`) |
-| DB assertions | Open `Session()` directly, don't go through the API |
-| Fixture scope | Session for everything except function-scoped cleanup fixtures |
-| Test marker | `@pytest.mark.asyncio(loop_scope="session")` always |
-| No `__init__.py` | Tests run under `--import-mode=importlib` |
-
-## Dependencies
-
-`httpx` and `pytest-asyncio` live in the workspace root `pyproject.toml` dev group; `pytest` is declared by the `ticketmaster` service package. `poetry install` from the root brings them all in.
+| Rule              | Detail                                                         |
+| ----------------- | -------------------------------------------------------------- |
+| Return types      | Always annotate (`-> None`, `-> AsyncGenerator[AsyncClient]`)  |
+| Keyword args      | Always use (`url=`, `json=`, `headers=`, `router=`)            |
+| Internal fixtures | Prefix with `_` (e.g. `_clear_sqlmodel_tables`)                |
+| Line length       | E501 ignored under `**/tests/**/*` (root `pyproject.toml`)     |
+| DB assertions     | Open `Session()` directly, don't go through the API            |
+| Fixture scope     | Session for everything except function-scoped cleanup fixtures |
+| Test marker       | `@pytest.mark.asyncio(loop_scope="session")` always            |
+| No `__init__.py`  | Tests run under `--import-mode=importlib`                      |
