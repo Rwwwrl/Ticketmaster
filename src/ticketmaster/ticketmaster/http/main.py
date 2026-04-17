@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from importlib.metadata import version
 
 from fastapi import FastAPI
-from libs.common.enums import ServiceNameEnum
+from libs.common.enums import AppNameEnum, ServiceNameEnum
 from libs.fastapi_ext.middlewares import (
     RequestBodyLimitMiddleware,
     RequestIdMiddleware,
@@ -25,7 +25,12 @@ from ticketmaster.utils import init_sqlmodel_engine
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    setup_logging(settings=settings, service_name=ServiceNameEnum.TICKETMASTER, process_type=ProcessTypeEnum.FASTAPI)
+    setup_logging(
+        settings=settings,
+        app_name=AppNameEnum.TICKETMASTER,
+        service_name=ServiceNameEnum.TICKETMASTER,
+        process_type=ProcessTypeEnum.FASTAPI,
+    )
     setup_sentry(settings=settings, release=version("ticketmaster"))
 
     engine = init_sqlmodel_engine(db_url=settings.postgres_db_url)
@@ -49,11 +54,11 @@ app = FastAPI(
     openapi_url=None if _is_sensitive else "/openapi.json",
 )
 
-app.add_middleware(RequestBodyLimitMiddleware, max_body_size=1_048_576)
 app.add_middleware(UnhandledExceptionMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestResponseLoggingMiddleware)
 app.add_middleware(RequestIdMiddleware)
+app.add_middleware(RequestBodyLimitMiddleware, max_body_size=1_048_576)
 
 
 @app.get("/health")
