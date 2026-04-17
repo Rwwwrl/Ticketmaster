@@ -19,14 +19,19 @@ _SAFE_HEADERS: frozenset[str] = frozenset(
         "host",
         "origin",
         "referer",
+        "traceparent",
+        "tracestate",
         "user-agent",
+        "x-amzn-trace-id",
         "x-forwarded-for",
+        "x-forwarded-host",
+        "x-forwarded-port",
         "x-forwarded-proto",
         "x-request-id",
     }
 )
 
-_SKIP_PATHS: frozenset[str] = frozenset({"/health", "/readiness_check", "/metrics", "/docs", "/openapi.json"})
+_SKIP_PATHS: frozenset[str] = frozenset({"/health", "/readiness_check", "/metrics", "/docs", "/redoc", "/openapi.json"})
 
 _MAX_BODY_LOG_SIZE: int = 10_000
 
