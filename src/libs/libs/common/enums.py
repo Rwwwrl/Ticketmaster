@@ -6,3 +6,7 @@ class EnvironmentEnum(StrEnum):
     TEST = auto()
     PROD = auto()
     CICD = auto()
+
+
+class ServiceNameEnum(StrEnum):
+    TICKETMASTER = auto()
