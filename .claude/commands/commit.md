@@ -31,9 +31,16 @@ Create a commit for staged changes.
 [root] chore pyproject.toml bumped ruff to 0.15.10
 ```
 
+## When to commit
+
+**Only commit when this skill is invoked in the current turn, and only commit what the user has already staged.** Two hard rules:
+
+- **Never commit on your own.** Not after producing an edit, not because the user approved a commit earlier in the conversation, not because "it seems like a good stopping point". Prior `/commit` approvals apply only to the commit they were given for. If changes are in the working tree and the user has not just invoked `/commit`, leave them alone so the user can review.
+- **Never stage files on behalf of the user.** Staging is how the user tells you what to commit. If `git status` shows nothing staged when `/commit` is invoked, stop and tell the user — do not run `git add`.
+
 ## Steps
 
-1. Run `git status` and `git diff --staged` to understand what is being committed.
-2. If nothing is staged, stage the relevant changed files (prefer specific files over `git add .`).
-3. Draft a commit message following the format above.
-4. Create the commit.
+1. Run `git status` and `git diff --staged` to see what the user has staged.
+2. If nothing is staged, stop and tell the user — do not stage anything yourself.
+3. If the staged changes cover multiple unrelated concerns, split them into separate commits (one per concern). Otherwise a single commit is fine.
+4. Draft a message for each commit in the format above and create the commits.
