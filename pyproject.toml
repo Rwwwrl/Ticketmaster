@@ -20,7 +20,8 @@ ipython = "^8.0.0"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "session"
-testpaths = ["src/ticketmaster/tests"]
+addopts = "--import-mode=importlib -p libs.tests_ext.sqlmodel_fixtures"
+testpaths = ["src/libs/libs/tests", "src/ticketmaster/ticketmaster/tests"]
 
 [tool.ruff]
 exclude = [
