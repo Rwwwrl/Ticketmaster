@@ -18,7 +18,7 @@ from libs.settings import is_data_sensitive_env
 from libs.sqlmodel_ext import Session
 from libs.sqlmodel_ext.utils import health_check as postgres_health_check
 
-from ticketmaster.http.v1 import v1_router
+from ticketmaster.http.v1.routes import v1_router
 from ticketmaster.settings import settings
 from ticketmaster.utils import init_sqlmodel_engine
 

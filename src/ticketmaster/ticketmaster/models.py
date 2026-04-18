@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from libs.sqlmodel_ext import BaseSqlModel
-from sqlalchemy import Column, DateTime, Identity, Integer, PrimaryKeyConstraint, String
+from libs.sqlmodel_ext import BaseSqlModel, EnumString
+from sqlalchemy import Column, DateTime, Identity, Integer, PrimaryKeyConstraint
 from sqlmodel import Field
 
 from ticketmaster.enums import EventTypeEnum, TicketStatusEnum
@@ -14,7 +14,7 @@ class Event(BaseSqlModel, table=True):
     id: int | None = Field(default=None, sa_column=Column(Integer, Identity()))
     name: str
     description: str
-    type: EventTypeEnum = Field(sa_type=String)
+    type: EventTypeEnum = Field(sa_type=EnumString(EventTypeEnum))
     start_at: datetime = Field(sa_type=DateTime(timezone=True))
 
 
@@ -32,6 +32,6 @@ class Ticket(BaseSqlModel, table=True):
     id: int | None = Field(default=None, sa_column=Column(Integer, Identity()))
     event_id: int = Field(foreign_key="event.id")
     user_id: int | None = Field(foreign_key="user.id")
-    status: TicketStatusEnum = Field(sa_type=String)
+    status: TicketStatusEnum = Field(sa_type=EnumString(TicketStatusEnum))
     reserved_at: datetime | None = Field(sa_type=DateTime(timezone=True))
     booked_at: datetime | None = Field(sa_type=DateTime(timezone=True))
