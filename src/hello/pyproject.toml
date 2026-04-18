@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "hello"
+version = "0.1.0"
+description = "Minimal FastAPI app for deployment learning"
+authors = ["Aleksei Sosov <forgithublesh@yandex.ru>"]
+packages = [{ include = "hello" }]
+
+[tool.poetry.dependencies]
+python = "^3.14"
+fastapi = { extras = ["standard"], version = "^0.136.0" }
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
