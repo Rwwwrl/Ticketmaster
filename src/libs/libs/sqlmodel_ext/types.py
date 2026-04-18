@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Any
 
 from sqlalchemy import String, TypeDecorator
 from sqlalchemy.engine import Dialect
@@ -17,9 +16,14 @@ class EnumString[EnumT: Enum](TypeDecorator[EnumT]):
     impl = String
     cache_ok = True
 
-    def __init__(self, enum_class: type[EnumT], **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-        self._enum_class = enum_class
+    def __init__(self, enum_class: type[EnumT]) -> None:
+        super().__init__()
+        # NOTE @sosov: Must stay public (no underscore). SQLAlchemy's compiled-query
+        # cache builds this type's static cache key by introspecting __init__ params
+        # and looking each name up in self.__dict__ — attributes prefixed with `_`
+        # are skipped. Without this, two EnumString(EnumA) / EnumString(EnumB)
+        # instances would collide on the same cache entry.
+        self.enum_class = enum_class
 
     def process_bind_param(self, value: EnumT | None, dialect: Dialect) -> str | None:
         if value is None:
@@ -29,4 +33,4 @@ class EnumString[EnumT: Enum](TypeDecorator[EnumT]):
     def process_result_value(self, value: str | None, dialect: Dialect) -> EnumT | None:
         if value is None:
             return None
-        return self._enum_class(value)
+        return self.enum_class(value)
