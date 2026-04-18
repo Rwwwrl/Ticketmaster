@@ -16,4 +16,4 @@ class EventDTO(DTO):
 
     @classmethod
     def from_sqlmodel(cls, model: Event) -> Self:
-        return cls(**model.model_dump(include=set(cls.model_fields)))
+        return cls(**model.model_dump())
