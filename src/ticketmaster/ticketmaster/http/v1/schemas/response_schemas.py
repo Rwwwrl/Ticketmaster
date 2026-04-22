@@ -11,3 +11,10 @@ class EventResponseSchema(BaseResponseSchema):
     description: str
     type: EventTypeEnum
     start_at: datetime
+
+
+class EventsPageResponseSchema(BaseResponseSchema):
+    items: list[EventResponseSchema]
+    page: int
+    page_size: int
+    total: int

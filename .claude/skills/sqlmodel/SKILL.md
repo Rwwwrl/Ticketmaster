@@ -76,6 +76,36 @@ class EventRepository:
 
 No `.scalars()`. No tuple unpacking. The model class flows through.
 
+### Method naming
+
+Prefer `get_one`, `get_all`, `get_by_<field>` over `list_*` / `find_*`. The paginated form is `get_all_paginated` — same prefix, same mental model, just returns `(list[DTO], total)`:
+
+```python
+from sqlalchemy import func
+from sqlmodel import select
+
+class EventRepository:
+    @classmethod
+    async def get_all_paginated(
+        cls,
+        session: AsyncSession,
+        page: int,
+        page_size: int,
+    ) -> tuple[list[EventDTO], int]:
+        offset = (page - 1) * page_size
+        items_result = await session.exec(
+            select(Event).order_by(Event.start_at, Event.id).offset(offset).limit(page_size)
+        )
+        items = [EventDTO.from_sqlmodel(model=event) for event in items_result.all()]
+
+        # Count the PK column, not `*` / `select_from(...)`. `func.count(Event.id)` keeps
+        # the scalar return type obvious — `.one()` gives you a plain int.
+        total_result = await session.exec(select(func.count(Event.id)))
+        total = total_result.one()
+
+        return items, total
+```
+
 ## Models
 
 Inherit from `BaseSqlModel` (from `libs.sqlmodel_ext`) — a `SQLModel` subclass that wires the `updated_at` listener and is the metadata target Alembic autogenerates against. Declare columns with sqlmodel's `Field`; foreign keys go through `Field(foreign_key="other_table.id")`, not `sqlalchemy.ForeignKey`. Reach for `sa_type=` only when you need a custom column type that SQLModel can't infer from the Python annotation:
