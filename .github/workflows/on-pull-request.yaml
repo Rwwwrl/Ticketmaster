@@ -45,6 +45,21 @@ jobs:
             fi
           done
 
+  validate_cloudformation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+
+      - name: Install cfn-lint
+        run: pip install cfn-lint==1.*
+
+      - name: Lint CloudFormation templates
+        run: cfn-lint src/*/service.yaml
+
   lint_and_test:
     runs-on: ubuntu-latest
 
