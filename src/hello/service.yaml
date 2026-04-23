@@ -29,12 +29,20 @@ Resources:
       Cluster: default
       Cpu: '256'
       Memory: '512'
-      HealthCheckPath: /health
+      HealthCheckPath: /readiness-check
       ExecutionRoleArn: !Ref ExecutionRoleArn
       InfrastructureRoleArn: !Ref InfrastructureRoleArn
       PrimaryContainer:
         Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/hello:${ImageTag}'
         ContainerPort: 8080
+        HealthCheck:
+          Command:
+            - CMD-SHELL
+            - python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health-check', timeout=2)"
+          Interval: 30
+          Timeout: 5
+          Retries: 3
+          StartPeriod: 10
         AwsLogsConfiguration:
           LogGroup: !Ref LogGroup
           LogStreamPrefix: hello

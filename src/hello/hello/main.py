@@ -8,8 +8,13 @@ async def root() -> dict[str, str]:
     return {"message": "hello world"}
 
 
-@app.get("/health")
-async def health() -> dict[str, str]:
+@app.get("/health-check")
+async def health_check() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.get("/readiness-check")
+async def readiness_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
