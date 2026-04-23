@@ -13,7 +13,7 @@ jobs:
   deploy-hello:
     uses: ./.github/workflows/called-deploy-container-service.yaml
     with:
-      environment: test
+      environment: test-eu
       service_name: hello
       service_path: src/hello
     secrets: inherit

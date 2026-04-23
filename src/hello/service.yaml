@@ -7,7 +7,7 @@ Parameters:
     Description: ECR image tag to deploy (git SHA).
   Environment:
     Type: String
-    AllowedValues: [test]
+    AllowedValues: [test-eu]
   ExecutionRoleArn:
     Type: String
     Description: Task execution role (ECR pull + log writes). Passed from a GitHub Actions variable in CI.
