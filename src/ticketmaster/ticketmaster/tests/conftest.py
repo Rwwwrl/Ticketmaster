@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from libs.sqlmodel_ext import BaseSqlModel
 from sqlalchemy.ext.asyncio import AsyncEngine
-from ticketmaster.http.v1 import v1_router
+from ticketmaster.http.v1.routes import v1_router
 from ticketmaster.models import Event, Ticket, User
 from ticketmaster.settings import Settings
 from ticketmaster.settings import settings as ticketmaster_settings

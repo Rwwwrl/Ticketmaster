@@ -82,4 +82,4 @@ jobs:
         run: poetry run ruff format --check .
 
       - name: Run tests
-        run: poetry run pytest
+        run: poetry run pytest --cov=src/libs/libs --cov=src/ticketmaster/ticketmaster --cov-report=term-missing --cov-fail-under=75

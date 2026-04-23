@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ticketmaster-libs"
-version = "0.1.0"
+version = "0.1.1"
 description = "Shared library for the ticketmaster service"
 authors = ["Aleksei Sosov <forgithublesh@yandex.ru>"]
 packages = [{ include = "libs" }]
@@ -20,6 +20,7 @@ fastapi = "^0.136.0"
 sentry-sdk = "^2.58.0"
 httpx = "^0.28.1"
 pytest-asyncio = "^1.3.0"
+factory-boy = "^3.3.3"
 
 [build-system]
 requires = ["poetry-core"]

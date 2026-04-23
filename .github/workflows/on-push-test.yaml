@@ -1,0 +1,19 @@
+name: Deploy to Test
+
+on:
+  push:
+    branches:
+      - "test/**"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy-hello:
+    uses: ./.github/workflows/called-deploy-container-service.yaml
+    with:
+      environment: test
+      service_name: hello
+      service_path: src/hello
+    secrets: inherit
