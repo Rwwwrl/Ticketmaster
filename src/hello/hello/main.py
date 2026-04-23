@@ -13,11 +13,6 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/readiness-check")
-async def readiness_check() -> dict[str, str]:
-    return {"status": "ok"}
-
-
 @app.get("/ping")
 async def ping() -> dict[str, str]:
     return {"message": "pong"}
