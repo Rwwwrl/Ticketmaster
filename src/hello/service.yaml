@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Hello FastAPI service on ECS Express Mode
+
+Parameters:
+  ImageTag:
+    Type: String
+    Description: ECR image tag to deploy (git SHA).
+  Environment:
+    Type: String
+    AllowedValues: [test]
+  ExecutionRoleArn:
+    Type: String
+    Description: Task execution role (ECR pull + log writes). Passed from a GitHub Actions variable in CI.
+  InfrastructureRoleArn:
+    Type: String
+    Description: Role ECS uses to manage ALB/TGs/SGs/alarms on our behalf. Passed from a GitHub Actions variable in CI.
+
+Resources:
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ecs/hello-${Environment}'
+      RetentionInDays: 14
+
+  Service:
+    Type: AWS::ECS::ExpressGatewayService
+    Properties:
+      ServiceName: !Sub 'hello-${Environment}'
+      Cluster: default
+      Cpu: '256'
+      Memory: '512'
+      HealthCheckPath: /health
+      ExecutionRoleArn: !Ref ExecutionRoleArn
+      InfrastructureRoleArn: !Ref InfrastructureRoleArn
+      PrimaryContainer:
+        Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/hello:${ImageTag}'
+        ContainerPort: 8080
+        AwsLogsConfiguration:
+          LogGroup: !Ref LogGroup
+          LogStreamPrefix: hello
+      ScalingTarget:
+        AutoScalingMetric: AVERAGE_CPU
+        AutoScalingTargetValue: 90
+        MinTaskCount: 1
+        MaxTaskCount: 1
+
+Outputs:
+  ServiceArn:
+    Value: !GetAtt Service.ServiceArn
+  ServiceUrl:
+    Description: Public hostname assigned by Express Mode
+    Value: !GetAtt Service.Endpoint
+  LogGroupName:
+    Value: !Ref LogGroup
