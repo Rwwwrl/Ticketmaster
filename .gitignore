@@ -175,5 +175,6 @@ justfile.local
 documentation/
 plans/
 **/.obsidian
+.ruff_cache
 obsidian-scripts/
 **/env.dev.yaml
