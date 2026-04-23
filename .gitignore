@@ -171,6 +171,7 @@ cython_debug/
 justfile.local
 .claude/settings.local.json
 .claude/skills/
+.claude/commands/
 .mcp.json
 .env.infra
 documentation/
