@@ -170,6 +170,7 @@ cython_debug/
 ######## PROJECT-SPECIFIC ########
 justfile.local
 .claude/settings.local.json
+.claude/skills/
 .mcp.json
 .env.infra
 documentation/
