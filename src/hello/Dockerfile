@@ -1,9 +1,14 @@
 FROM python:3.14-slim
 WORKDIR /app
 
-RUN pip install --no-cache-dir "fastapi[standard]==0.136.*"
+ENV POETRY_VERSION=1.8.3
+RUN pip install poetry==$POETRY_VERSION
+
+COPY pyproject.toml poetry.lock ./
+RUN poetry install --no-root --only main
 
 COPY hello/ ./hello/
+RUN poetry install --only main
 
 EXPOSE 8080
-CMD ["fastapi", "run", "hello/main.py", "--port", "8080", "--host", "0.0.0.0"]
+CMD ["poetry", "run", "fastapi", "run", "hello/main.py", "--port", "8080", "--host", "0.0.0.0"]
