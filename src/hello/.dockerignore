@@ -4,5 +4,4 @@ __pycache__/
 .ruff_cache/
 Dockerfile
 .dockerignore
-pyproject.toml
-poetry.lock
+env.dev.yaml
