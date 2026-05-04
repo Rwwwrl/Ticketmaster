@@ -6,5 +6,3 @@ Dockerfile
 .dockerignore
 env.dev.yaml
 ticketmaster/tests/
-migrations/
-alembic.ini

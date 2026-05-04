@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Ticketmaster migration task definition (Fargate, on-demand RunTask)
+
+Parameters:
+  ImageTag:
+    Type: String
+    Description: ECR image tag to run migrations against (git SHA).
+  Environment:
+    Type: String
+    AllowedValues: [test-eu]
+  ExecutionRoleArn:
+    Type: String
+    Description: Task execution role (ECR pull + log writes + secret reads). Passed from a GitHub Actions variable in CI.
+
+Resources:
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ecs/ticketmaster-${Environment}-migrate'
+      RetentionInDays: 14
+
+  MigrationTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub 'ticketmaster-${Environment}-migrate'
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      Cpu: '256'
+      Memory: '512'
+      ExecutionRoleArn: !Ref ExecutionRoleArn
+      ContainerDefinitions:
+        - Name: migrate
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ticketmaster:${ImageTag}'
+          Essential: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref LogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: migrate
+          Secrets:
+            - Name: ENVIRONMENT
+              ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/ticketmaster/${Environment}/ENVIRONMENT'
+            - Name: POSTGRES_DB_URL
+              ValueFrom: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:ticketmaster/ticketmaster/${Environment}/POSTGRES_DB_URL'
+            - Name: SENTRY_DSN
+              ValueFrom: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:ticketmaster/ticketmaster/${Environment}/SENTRY_DSN'
+
+Outputs:
+  MigrationTaskDefinitionArn:
+    Value: !Ref MigrationTaskDefinition
+  LogGroupName:
+    Value: !Ref LogGroup
