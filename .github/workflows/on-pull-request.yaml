@@ -58,7 +58,7 @@ jobs:
         run: pip install cfn-lint==1.*
 
       - name: Lint CloudFormation templates
-        run: cfn-lint src/*/service.yaml
+        run: cfn-lint src/*/service.yaml src/*/migration.yaml
 
   lint_and_test:
     runs-on: ubuntu-latest

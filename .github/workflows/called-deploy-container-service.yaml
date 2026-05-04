@@ -12,12 +12,15 @@ on:
       service_path:
         required: true
         type: string
+      run_migrations:
+        required: false
+        type: boolean
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    timeout-minutes: 15
+    timeout-minutes: 60
     permissions:
       contents: read
       id-token: write
@@ -58,6 +61,27 @@ jobs:
 
           docker push $IMAGE
 
+      - name: Deploy migration CloudFormation stack
+        if: ${{ inputs.run_migrations }}
+        run: |
+          aws cloudformation deploy \
+            --stack-name ${{ inputs.service_name }}-${{ inputs.environment }}-migrate \
+            --template-file ${{ inputs.service_path }}/migration.yaml \
+            --parameter-overrides \
+                ImageTag=${{ github.sha }} \
+                Environment=${{ inputs.environment }} \
+                ExecutionRoleArn=${{ vars.ECS_EXECUTION_ROLE_ARN }} \
+            --no-fail-on-empty-changeset \
+            --region ${{ vars.AWS_REGION }}
+
+      - name: Run expand migrations
+        if: ${{ inputs.run_migrations }}
+        uses: ./.github/actions/run-ecs-migration
+        with:
+          environment: ${{ inputs.environment }}
+          stack_name: ${{ inputs.service_name }}-${{ inputs.environment }}-migrate
+          command: poetry run alembic upgrade expand@head
+
       - name: Deploy CloudFormation stack
         run: |
           aws cloudformation deploy \
@@ -70,3 +94,11 @@ jobs:
                 InfrastructureRoleArn=${{ vars.ECS_INFRASTRUCTURE_ROLE_ARN }} \
             --no-fail-on-empty-changeset \
             --region ${{ vars.AWS_REGION }}
+
+      - name: Run contract migrations
+        if: ${{ inputs.run_migrations }}
+        uses: ./.github/actions/run-ecs-migration
+        with:
+          environment: ${{ inputs.environment }}
+          stack_name: ${{ inputs.service_name }}-${{ inputs.environment }}-migrate
+          command: poetry run alembic upgrade contract@head

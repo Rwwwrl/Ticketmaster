@@ -24,6 +24,7 @@ jobs:
       environment: test-eu
       service_name: hello
       service_path: src/hello
+      run_migrations: false
     secrets: inherit
 
   deploy-ticketmaster:
@@ -33,4 +34,5 @@ jobs:
       environment: test-eu
       service_name: ticketmaster
       service_path: src/ticketmaster
+      run_migrations: true
     secrets: inherit
