@@ -1,0 +1,63 @@
+name: Publish Python Package
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      package_path:
+        required: true
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+
+      - name: Install Poetry
+        run: pip install poetry==1.8.3
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.DEPLOYER_TO_AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Configure Poetry for CodeArtifact
+        working-directory: ${{ inputs.package_path }}
+        run: |
+          TOKEN=$(aws codeartifact get-authorization-token \
+            --domain ${{ vars.CODEARTIFACT_DOMAIN }} \
+            --query authorizationToken --output text)
+
+          echo "::add-mask::$TOKEN"
+
+          REPO_URL=$(aws codeartifact get-repository-endpoint \
+            --domain ${{ vars.CODEARTIFACT_DOMAIN }} \
+            --repository ${{ vars.CODEARTIFACT_REPOSITORY }} \
+            --format pypi --query repositoryEndpoint --output text)
+
+          poetry config repositories.codeartifact "$REPO_URL"
+          poetry config http-basic.codeartifact aws "$TOKEN"
+
+      - name: Build and publish
+        working-directory: ${{ inputs.package_path }}
+        run: |
+          OUTPUT=$(poetry publish --build --repository codeartifact 2>&1) && exit 0
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -qi "already exists"; then
+            echo "Version already exists in registry, skipping"
+            exit 0
+          fi
+          exit 1

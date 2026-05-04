@@ -10,10 +10,27 @@ permissions:
   id-token: write
 
 jobs:
+  publish-libs:
+    uses: ./.github/workflows/called-publish-python-package.yaml
+    with:
+      environment: test-eu
+      package_path: src/libs
+    secrets: inherit
+
   deploy-hello:
+    needs: [publish-libs]
     uses: ./.github/workflows/called-deploy-container-service.yaml
     with:
       environment: test-eu
       service_name: hello
       service_path: src/hello
+    secrets: inherit
+
+  deploy-ticketmaster:
+    needs: [publish-libs]
+    uses: ./.github/workflows/called-deploy-container-service.yaml
+    with:
+      environment: test-eu
+      service_name: ticketmaster
+      service_path: src/ticketmaster
     secrets: inherit

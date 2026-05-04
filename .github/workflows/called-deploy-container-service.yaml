@@ -37,7 +37,25 @@ jobs:
           REGISTRY: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
         run: |
           IMAGE=$REGISTRY/${{ inputs.service_name }}:${{ github.sha }}
-          docker build -t $IMAGE ${{ inputs.service_path }}
+
+          CODEARTIFACT_TOKEN=$(aws codeartifact get-authorization-token \
+            --domain ${{ vars.CODEARTIFACT_DOMAIN }} \
+            --query authorizationToken --output text)
+
+          echo "::add-mask::$CODEARTIFACT_TOKEN"
+
+          export CODEARTIFACT_TOKEN
+
+          REPO_URL=$(aws codeartifact get-repository-endpoint \
+            --domain ${{ vars.CODEARTIFACT_DOMAIN }} \
+            --repository ${{ vars.CODEARTIFACT_REPOSITORY }} \
+            --format pypi --query repositoryEndpoint --output text)
+
+          docker build \
+            --secret id=codeartifact_token,env=CODEARTIFACT_TOKEN \
+            --build-arg CODEARTIFACT_INDEX_URL="${REPO_URL}simple/" \
+            -t $IMAGE ${{ inputs.service_path }}
+
           docker push $IMAGE
 
       - name: Deploy CloudFormation stack
