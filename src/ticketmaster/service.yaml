@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Hello FastAPI service on ECS Express Mode
+Description: Ticketmaster FastAPI service on ECS Express Mode
 
 Parameters:
   ImageTag:
@@ -19,30 +19,32 @@ Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub '/ecs/hello-${Environment}'
+      LogGroupName: !Sub '/ecs/ticketmaster-${Environment}'
       RetentionInDays: 14
 
   Service:
     Type: AWS::ECS::ExpressGatewayService
     Properties:
-      ServiceName: !Sub 'hello-${Environment}'
+      ServiceName: !Sub 'ticketmaster-${Environment}'
       Cluster: default
       Cpu: '256'
       Memory: '512'
-      HealthCheckPath: /health-check
+      HealthCheckPath: /readiness_check
       ExecutionRoleArn: !Ref ExecutionRoleArn
       InfrastructureRoleArn: !Ref InfrastructureRoleArn
       PrimaryContainer:
-        Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/hello:${ImageTag}'
+        Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ticketmaster:${ImageTag}'
         ContainerPort: 8080
         AwsLogsConfiguration:
           LogGroup: !Ref LogGroup
-          LogStreamPrefix: hello
+          LogStreamPrefix: ticketmaster
         Secrets:
-          - Name: HELLO
-            ValueFrom: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:ticketmaster/hello/${Environment}/HELLO'
-          - Name: LOG_LEVEL
-            ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/hello/${Environment}/LOG_LEVEL'
+          - Name: ENVIRONMENT
+            ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/ticketmaster/${Environment}/ENVIRONMENT'
+          - Name: POSTGRES_DB_URL
+            ValueFrom: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:ticketmaster/ticketmaster/${Environment}/POSTGRES_DB_URL'
+          - Name: SENTRY_DSN
+            ValueFrom: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:ticketmaster/ticketmaster/${Environment}/SENTRY_DSN'
       ScalingTarget:
         AutoScalingMetric: AVERAGE_CPU
         AutoScalingTargetValue: 90
