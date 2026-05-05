@@ -2,6 +2,16 @@
 
 Ticketmaster is an online platform where anyone can browse and book tickets to live events — sport games, concerts, and theater shows.
 
+## Deployment
+
+The service deploys to AWS via GitHub Actions → ECR → CloudFormation → ECS Express Mode. Environment naming is `<service>-<region-code>`; the only environment so far is `test-eu`.
+
+- **AWS region:** `eu-central-1` (Frankfurt). Anything region-scoped — KMS `kms:ViaService` conditions, SSM/Secrets Manager ARNs, GitHub Actions `vars.AWS_REGION` — must use this region.
+- **SSM/Secrets path convention:**
+  - Env-shared (e.g. VPC, cluster): `/ticketmaster/<env>/<key>` — for example `/ticketmaster/test-eu/migration_subnets`.
+  - Service-scoped: `/ticketmaster/<service>/<env>/<key>` — for example `/ticketmaster/ticketmaster/test-eu/POSTGRES_DB_URL`.
+- **Secrets Manager ARN suffix:** drop the `-XxXxXx` suffix from `service.yaml` / `migration.yaml` `ValueFrom`. ECS accepts the partial ARN; IAM matches via wildcard at runtime.
+
 ## Service Internal Architecture
 
 Ticketmaster is a single deployable service at `src/ticketmaster/`. Shared infrastructure lives in `src/libs/` as a separate Poetry package.
