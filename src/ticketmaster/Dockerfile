@@ -5,7 +5,7 @@ ENV POETRY_VERSION=1.8.3
 RUN pip install poetry==$POETRY_VERSION
 
 ARG CODEARTIFACT_INDEX_URL
-COPY pyproject.toml poetry.lock ./
+COPY pyproject.toml ./
 
 RUN --mount=type=secret,id=codeartifact_token \
     poetry source add --priority=supplemental codeartifact "$CODEARTIFACT_INDEX_URL" && \
