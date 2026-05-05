@@ -78,7 +78,6 @@ jobs:
         if: ${{ inputs.run_migrations }}
         uses: ./.github/actions/run-ecs-migration
         with:
-          environment: ${{ inputs.environment }}
           stack_name: ${{ inputs.service_name }}-${{ inputs.environment }}-migrate
           command: poetry run alembic upgrade expand@head
 
@@ -99,6 +98,5 @@ jobs:
         if: ${{ inputs.run_migrations }}
         uses: ./.github/actions/run-ecs-migration
         with:
-          environment: ${{ inputs.environment }}
           stack_name: ${{ inputs.service_name }}-${{ inputs.environment }}-migrate
           command: poetry run alembic upgrade contract@head
