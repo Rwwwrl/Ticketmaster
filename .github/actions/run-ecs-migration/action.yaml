@@ -43,13 +43,13 @@ runs:
           --query 'tasks[0].taskArn' --output text)
         echo "Started task: $TASK_ARN"
 
-        DEADLINE=$((SECONDS + 1800))
+        DEADLINE=$((SECONDS + 300))
         while true; do
           STATUS=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" --query 'tasks[0].lastStatus' --output text)
           echo "lastStatus=$STATUS"
           [ "$STATUS" = "STOPPED" ] && break
           if [ $SECONDS -ge $DEADLINE ]; then
-            echo "::error::Migration timed out after 30 min"
+            echo "::error::Migration timed out after 5 min"
             aws ecs stop-task --cluster "$CLUSTER" --task "$TASK_ARN" --reason "CI timeout" || true
             exit 1
           fi

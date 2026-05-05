@@ -20,7 +20,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    timeout-minutes: 60
+    timeout-minutes: 25
     permissions:
       contents: read
       id-token: write
