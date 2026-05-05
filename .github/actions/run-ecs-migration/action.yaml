@@ -12,11 +12,12 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Resolve TaskDefinition ARN and default-VPC networking
+    - name: Resolve TaskDefinition ARN, default-VPC networking, and command tokens
       id: resolve
       shell: bash
       env:
         STACK_NAME: ${{ inputs.stack_name }}
+        COMMAND: ${{ inputs.command }}
       run: |
         set -euo pipefail
 
@@ -32,11 +33,17 @@ runs:
         SG=$(aws ec2 describe-security-groups --filters Name=vpc-id,Values=$VPC_ID Name=group-name,Values=default \
           --query 'SecurityGroups[0].GroupId' --output text)
 
+        # geekcell action expects override-container-command as one token per line
+        COMMAND_TOKENS=$(echo "$COMMAND" | tr ' ' '\n')
+
         {
           echo "td_arn=$TD_ARN"
           echo "sg=$SG"
           echo "subnets<<EOF"
           echo "$SUBNETS"
+          echo "EOF"
+          echo "command_tokens<<EOF"
+          echo "$COMMAND_TOKENS"
           echo "EOF"
         } >> "$GITHUB_OUTPUT"
 
@@ -49,6 +56,6 @@ runs:
         security-group-ids: ${{ steps.resolve.outputs.sg }}
         assign-public-ip: ENABLED
         override-container: migrate
-        override-container-command: ${{ inputs.command }}
+        override-container-command: ${{ steps.resolve.outputs.command_tokens }}
         tail-logs: "true"
         task-stop-max-wait-time: 300
