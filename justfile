@@ -25,11 +25,14 @@ restart-infra:
 
 
 [group('aws')]
-aws-down stack="hello-test" profile="tm-test":
+aws-down env="test-eu" profile="tm-test":
     #!/usr/bin/env bash
     set -euo pipefail
     export AWS_PROFILE={{profile}}
-    echo "Deleting CloudFormation stack '{{stack}}' (ALB + NAT + ECS + task defs)..."
-    aws cloudformation delete-stack --stack-name {{stack}}
-    aws cloudformation wait stack-delete-complete --stack-name {{stack}}
-    echo "Stack '{{stack}}' deleted. Idle AWS cost should now be ~\$0."
+    for stack in "ticketmaster-{{env}}" "ticketmaster-{{env}}-migrate"; do
+        echo "Deleting CloudFormation stack '$stack'..."
+        aws cloudformation delete-stack --stack-name "$stack"
+        aws cloudformation wait stack-delete-complete --stack-name "$stack"
+        echo "Stack '$stack' deleted."
+    done
+    echo "All ticketmaster stacks for env '{{env}}' deleted. Idle AWS cost should now be ~\$0."
