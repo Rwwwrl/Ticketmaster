@@ -58,4 +58,8 @@ runs:
         override-container: migrate
         override-container-command: ${{ steps.resolve.outputs.command_tokens }}
         tail-logs: "true"
-        task-stop-max-wait-time: 300
+        # Fargate cold start (ENI attach + image pull + secrets fetch) is ~30-60s; 120s gives 2x headroom.
+        task-start-max-wait-time: 120
+        # Alembic runs in seconds on a small schema; 180s covers slow expand migrations with backfill.
+        # Total budget (start + stop) = 5 min, matching the migration internal deadline.
+        task-stop-max-wait-time: 180
