@@ -1,0 +1,63 @@
+name: Deploy Lambda Function
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      lambda_name:
+        required: true
+        type: string
+        description: AWS Lambda function name (e.g. ticketmaster-cognito-pre-signup-test-eu).
+      lambda_path:
+        required: true
+        type: string
+        description: Path to the Lambda package (e.g. src/lambdas/cognito_pre_signup).
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install Poetry 1.8.3
+        run: pipx install poetry==1.8.3
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.DEPLOYER_TO_AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Build deployment package
+        working-directory: ${{ inputs.lambda_path }}
+        run: |
+          rm -rf build && mkdir -p build/package
+          poetry export --without dev --without-hashes -f requirements.txt -o build/requirements.txt
+          # Lambda runtime ships boto3/botocore — pull only what's missing, with manylinux wheels.
+          pip install \
+            --target build/package \
+            --platform manylinux2014_x86_64 \
+            --only-binary=:all: \
+            --implementation cp \
+            --python-version 3.14 \
+            -r build/requirements.txt
+          cp -r cognito_pre_signup build/package/
+
+      - uses: aws-actions/aws-lambda-deploy@v1.0.4
+        with:
+          function-name: ${{ inputs.lambda_name }}
+          code-artifacts-dir: ${{ inputs.lambda_path }}/build/package
+          handler: cognito_pre_signup.handler.lambda_handler
+          runtime: python3.14
+          publish: true

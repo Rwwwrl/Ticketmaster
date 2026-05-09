@@ -91,6 +91,7 @@ jobs:
                 Environment=${{ inputs.environment }} \
                 ExecutionRoleArn=${{ vars.ECS_EXECUTION_ROLE_ARN }} \
                 InfrastructureRoleArn=${{ vars.ECS_INFRASTRUCTURE_ROLE_ARN }} \
+            --capabilities CAPABILITY_IAM \
             --no-fail-on-empty-changeset \
             --region ${{ vars.AWS_REGION }}
 
