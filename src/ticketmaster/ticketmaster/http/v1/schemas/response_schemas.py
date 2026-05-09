@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import UUID
 
 from libs.fastapi_ext.schemas.base_schemas import BaseResponseSchema
 
@@ -18,3 +19,12 @@ class EventsPageResponseSchema(BaseResponseSchema):
     page: int
     page_size: int
     total: int
+
+
+class UserResponseSchema(BaseResponseSchema):
+    uuid: UUID
+    pool_id: str
+    email: str
+    external_id: str
+    created_at: datetime
+    updated_at: datetime

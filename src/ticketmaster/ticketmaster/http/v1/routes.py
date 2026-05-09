@@ -1,11 +1,13 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from libs.sqlmodel_ext import Session
+from sqlalchemy.exc import IntegrityError
 
-from ticketmaster.http.v1.schemas import response_schemas
-from ticketmaster.repositories import EventRepository
-from ticketmaster.serializers import ToEventResponseSchema
+from ticketmaster.http.v1.dependencies import validate_lambda_jwt
+from ticketmaster.http.v1.schemas import request_schemas, response_schemas
+from ticketmaster.repositories import EventRepository, UserRepository
+from ticketmaster.serializers import ToEventResponseSchemaSerializer, ToUserResponseSchemaSerializer
 
 v1_router = APIRouter()
 
@@ -27,8 +29,35 @@ async def list_events_page(
         )
 
     return response_schemas.EventsPageResponseSchema(
-        items=[ToEventResponseSchema.serialize(dto=dto) for dto in items],
+        items=[ToEventResponseSchemaSerializer.serialize(dto=dto) for dto in items],
         page=page,
         page_size=page_size,
         total=total,
     )
+
+
+@v1_router.post(
+    "/users/",
+    status_code=status.HTTP_201_CREATED,
+    response_model=response_schemas.UserResponseSchema,
+    dependencies=[Depends(validate_lambda_jwt)],
+)
+async def create_user_fallback(
+    payload: request_schemas.CreateUserFallbackRequestSchema,
+) -> response_schemas.UserResponseSchema:
+    try:
+        async with Session() as session, session.begin():
+            dto = await UserRepository.create(
+                session=session,
+                uuid=payload.uuid,
+                pool_id=payload.pool_id,
+                email=payload.email,
+                external_id=payload.external_id,
+            )
+    except IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this email or pool_id+external_id already exists",
+        )
+
+    return ToUserResponseSchemaSerializer.serialize(dto=dto)

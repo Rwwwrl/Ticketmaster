@@ -1,7 +1,8 @@
 from datetime import datetime
+from uuid import UUID
 
 from libs.sqlmodel_ext import BaseSqlModel, EnumString
-from sqlalchemy import Column, DateTime, Identity, Integer, PrimaryKeyConstraint
+from sqlalchemy import Column, DateTime, Identity, Index, Integer, PrimaryKeyConstraint
 from sqlmodel import Field
 
 from ticketmaster.enums import EventTypeEnum, TicketStatusEnum
@@ -20,9 +21,18 @@ class Event(BaseSqlModel, table=True):
 
 class User(BaseSqlModel, table=True):
     __tablename__ = "user"
-    __table_args__ = (PrimaryKeyConstraint("id"),)
+    __table_args__ = (
+        PrimaryKeyConstraint("id"),
+        Index("ix_user_uuid", "uuid", unique=True),
+        Index("ix_user_email", "email", unique=True),
+        Index("ix_user_pool_external_id", "pool_id", "external_id", unique=True),
+    )
 
     id: int | None = Field(default=None, sa_column=Column(Integer, Identity()))
+    uuid: UUID
+    pool_id: str
+    email: str
+    external_id: str
 
 
 class Ticket(BaseSqlModel, table=True):
