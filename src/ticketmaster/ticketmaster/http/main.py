@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from importlib.metadata import version
 
 from fastapi import FastAPI
+from libs.aws.session import bind_task_role_to_aws_session
 from libs.common.enums import AppNameEnum, ServiceNameEnum
 from libs.fastapi_ext.middlewares import (
     RequestBodyLimitMiddleware,
@@ -36,6 +37,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     engine = init_sqlmodel_engine(db_url=settings.postgres_db_url)
     Session.configure(bind=engine)
     app.state.sqlmodel_engine = engine
+
+    bind_task_role_to_aws_session(
+        region=settings.aws_task_role.region,
+        access_key_id=settings.aws_task_role.access_key_id,
+        secret_access_key=settings.aws_task_role.secret_access_key,
+    )
 
     yield
 

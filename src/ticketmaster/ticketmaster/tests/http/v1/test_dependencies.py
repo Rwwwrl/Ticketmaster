@@ -9,7 +9,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from fastapi import HTTPException
-from ticketmaster.http.v1.dependencies import _PublicAWSKeyCache, validate_lambda_jwt
+from ticketmaster.http.v1.dependencies import _cache, validate_lambda_jwt
 
 
 def _make_keypair() -> RSAPrivateKey:
@@ -41,9 +41,9 @@ def _sign_jwt(private_key: RSAPrivateKey, *, exp_offset: int = 60) -> str:
 @pytest.fixture
 def signing_key_with_cached_public_key() -> Iterator[RSAPrivateKey]:
     private_key = _make_keypair()
-    _PublicAWSKeyCache._cached_pem = _public_pem(private_key)
+    _cache._cached_pem = _public_pem(private_key)
     yield private_key
-    _PublicAWSKeyCache._cached_pem = None
+    _cache._cached_pem = None
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -85,15 +85,15 @@ async def test_validate_lambda_jwt_when_kms_key_was_rotated_passes_after_refresh
     after the refresh-once-on-InvalidSignature path."""
     old_key = _make_keypair()
     new_key = _make_keypair()
-    _PublicAWSKeyCache._cached_pem = _public_pem(old_key)
-    monkeypatch.setattr(
-        _PublicAWSKeyCache,
-        "_fetch_from_kms",
-        classmethod(lambda cls: _public_pem(new_key)),
-    )
+    _cache._cached_pem = _public_pem(old_key)
+
+    async def _fake_fetch() -> bytes:
+        return _public_pem(new_key)
+
+    monkeypatch.setattr(_cache, "_fetch_from_kms", _fake_fetch)
 
     try:
         token = _sign_jwt(new_key)
         await validate_lambda_jwt(authorization=f"Bearer {token}")
     finally:
-        _PublicAWSKeyCache._cached_pem = None
+        _cache._cached_pem = None
