@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Cognito PreSignUp Lambda - IAM role + function shell + env vars
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [test-eu]
+  TicketmasterApiUrl:
+    Type: String
+    Description: ALB endpoint of the deployed ticketmaster service.
+
+Resources:
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: kms-sign
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: kms:Sign
+                Resource: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_KMS_KEY_ARN}}'
+
+  Function:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'ticketmaster-cognito-pre-signup-${Environment}'
+      Runtime: python3.14
+      Handler: cognito_pre_signup.handler.lambda_handler
+      Role: !GetAtt ExecutionRole.Arn
+      Timeout: 10
+      MemorySize: 256
+      Code:
+        ZipFile: |
+          # Placeholder. Real code is uploaded by aws-actions/aws-lambda-deploy.
+          def lambda_handler(event, context):
+              return event
+      Environment:
+        Variables:
+          TICKETMASTER_API_URL: !Ref TicketmasterApiUrl
+          JWT_KMS_KEY_ARN: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_KMS_KEY_ARN}}'
+          JWT_AUDIENCE: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_AUDIENCE}}'
+          JWT_ISSUER: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_ISSUER}}'
+          LAMBDA_ROLE_ARN: !GetAtt ExecutionRole.Arn
+
+Outputs:
+  FunctionName:
+    Value: !Ref Function
+  ExecutionRoleArn:
+    Value: !GetAtt ExecutionRole.Arn

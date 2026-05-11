@@ -22,6 +22,25 @@ Resources:
       LogGroupName: !Sub '/ecs/ticketmaster-${Environment}'
       RetentionInDays: 14
 
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: kms-get-public-key
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: kms:GetPublicKey
+                Resource: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_KMS_KEY_ARN}}'
+
   Service:
     Type: AWS::ECS::ExpressGatewayService
     Properties:
@@ -31,6 +50,7 @@ Resources:
       Memory: '1024'
       HealthCheckPath: /readiness_check
       ExecutionRoleArn: !Ref ExecutionRoleArn
+      TaskRoleArn: !GetAtt TaskRole.Arn
       InfrastructureRoleArn: !Ref InfrastructureRoleArn
       PrimaryContainer:
         Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/ticketmaster:${ImageTag}'
@@ -49,6 +69,12 @@ Resources:
             ValueFrom: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:ticketmaster/ticketmaster/${Environment}/POSTGRES_DB_URL'
           - Name: SENTRY_DSN
             ValueFrom: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:ticketmaster/ticketmaster/${Environment}/SENTRY_DSN'
+          - Name: LAMBDA_JWT_KMS_KEY_ARN
+            ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_KMS_KEY_ARN'
+          - Name: LAMBDA_JWT_AUDIENCE
+            ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_AUDIENCE'
+          - Name: LAMBDA_JWT_ISSUER
+            ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_ISSUER'
       ScalingTarget:
         AutoScalingMetric: AVERAGE_CPU
         AutoScalingTargetValue: 90
@@ -63,3 +89,5 @@ Outputs:
     Value: !GetAtt Service.Endpoint
   LogGroupName:
     Value: !Ref LogGroup
+  TaskRoleArn:
+    Value: !GetAtt TaskRole.Arn

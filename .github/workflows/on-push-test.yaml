@@ -26,3 +26,12 @@ jobs:
       service_path: src/ticketmaster
       run_migrations: true
     secrets: inherit
+
+  deploy-cognito-pre-signup-lambda:
+    needs: [deploy-ticketmaster]
+    uses: ./.github/workflows/called-deploy-lambda.yaml
+    with:
+      environment: test-eu
+      lambda_name: ticketmaster-cognito-pre-signup-test-eu
+      lambda_path: src/lambdas/cognito_pre_signup
+    secrets: inherit
