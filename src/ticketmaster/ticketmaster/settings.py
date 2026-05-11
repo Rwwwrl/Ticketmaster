@@ -13,8 +13,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 class AWSTaskRoleSettings(DTO):
     region: str
-    access_key_id: str
-    secret_access_key: str
+    access_key_id: str | None = None
+    secret_access_key: str | None = None
+    session_token: str | None = None
 
 
 class Settings(SentrySettingsMixin, LoggingSettingsMixin, PostgresSettingsMixin, BaseAppSettings):

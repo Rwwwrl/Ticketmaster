@@ -42,6 +42,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         region=settings.aws_task_role.region,
         access_key_id=settings.aws_task_role.access_key_id,
         secret_access_key=settings.aws_task_role.secret_access_key,
+        session_token=settings.aws_task_role.session_token,
     )
 
     yield
