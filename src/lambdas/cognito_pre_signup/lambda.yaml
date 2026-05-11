@@ -38,7 +38,7 @@ Resources:
       Runtime: python3.14
       Handler: cognito_pre_signup.handler.lambda_handler
       Role: !GetAtt ExecutionRole.Arn
-      Timeout: 10
+      Timeout: 20
       MemorySize: 256
       Code:
         ZipFile: |
