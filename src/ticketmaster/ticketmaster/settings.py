@@ -22,7 +22,9 @@ class Settings(SentrySettingsMixin, LoggingSettingsMixin, PostgresSettingsMixin,
     model_config = SettingsConfigDict(extra="ignore", env_nested_delimiter="__")
     env_dev_yaml: ClassVar[Path] = BASE_DIR / "env.dev.yaml"
 
-    aws_task_role: AWSTaskRoleSettings
+    # NOTE @sosov: Only needed for local dev. In prod, boto3 picks up the task role
+    # credentials from ECS-injected env vars automatically, so the whole block can be None.
+    aws_task_role: AWSTaskRoleSettings | None = None
     lambda_jwt_kms_key_arn: str
     lambda_jwt_audience: str
     lambda_jwt_issuer: str
