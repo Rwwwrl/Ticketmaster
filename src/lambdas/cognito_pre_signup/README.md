@@ -20,12 +20,30 @@ Lambda handler entrypoint: `cognito_pre_signup.handler.lambda_handler`.
 
 | Var | Source |
 | --- | --- |
-| `TICKETMASTER_API_URL` | Backend ALB URL (no trailing slash). |
+| `TICKETMASTER_API_URL` | Set by `lambda.yaml` from the ticketmaster service stack's `ServiceUrl` output. |
 | `AWS_REGION` | Auto-injected by the Lambda runtime. |
-| `JWT_KMS_KEY_ARN` | ARN of the asymmetric KMS key Lambda signs with. |
-| `JWT_AUDIENCE` | Must match backend `LAMBDA_JWT_AUDIENCE`. |
-| `JWT_ISSUER` | Must match backend `LAMBDA_JWT_ISSUER`. |
-| `LAMBDA_ROLE_ARN` | This Lambda's own execution role ARN. Used as JWT `sub` for audit. |
+| `JWT_KMS_KEY_ARN` | Set by `lambda.yaml` via SSM `/ticketmaster/ticketmaster/<env>/LAMBDA_JWT_KMS_KEY_ARN`. |
+| `JWT_AUDIENCE` | Set by `lambda.yaml` via SSM `/ticketmaster/ticketmaster/<env>/LAMBDA_JWT_AUDIENCE`. Must match backend. |
+| `JWT_ISSUER` | Set by `lambda.yaml` via SSM `/ticketmaster/ticketmaster/<env>/LAMBDA_JWT_ISSUER`. Must match backend. |
+| `LAMBDA_ROLE_ARN` | Set by `lambda.yaml` via `!GetAtt ExecutionRole.Arn`. Used as JWT `sub` for audit. |
+
+## Provisioning model
+
+Three layers, each owned by a different thing:
+
+- **Manual, one-off per env** — not in this repo, done in the AWS Console:
+  - Create the KMS asymmetric key (`RSA_2048`, key usage `SIGN_VERIFY`, region `eu-central-1`); grant `kms:GetPublicKey` to the ticketmaster ECS task role via the key policy.
+  - Write its ARN to SSM at `/ticketmaster/ticketmaster/<env>/LAMBDA_JWT_KMS_KEY_ARN`.
+  - Write the SSM params `/ticketmaster/ticketmaster/<env>/LAMBDA_JWT_AUDIENCE` and `LAMBDA_JWT_ISSUER`. These are shared with `service.yaml`.
+  - Wire this Lambda as the PreSignUp trigger on the Cognito User Pool.
+
+- **Managed by `lambda.yaml` (CloudFormation)** — deployed from CI:
+  - The Lambda function shell (`ticketmaster-cognito-pre-signup-<env>`).
+  - The Lambda execution IAM role + inline `kms:Sign` policy on the KMS key.
+  - Env vars (resolved from SSM via `{{resolve:ssm:...}}`).
+
+- **Managed by `aws-actions/aws-lambda-deploy`** — code only:
+  - The Python zip uploaded on every push. The CFN template only declares a placeholder `ZipFile` for first-time create; subsequent CFN deploys see no Code diff and don't revert what `aws-lambda-deploy` uploaded.
 
 ## Build the deployment zip locally
 
@@ -39,7 +57,7 @@ cd build/package && zip -r ../lambda.zip . && cd ../..
 # Result: build/lambda.zip — upload via Console or CI.
 ```
 
-CI does the same via `.github/workflows/on-push-test-lambda.yaml`.
+CI does the same via `.github/workflows/on-push-test.yaml` (which calls `called-deploy-lambda.yaml`).
 
 ## Run tests
 

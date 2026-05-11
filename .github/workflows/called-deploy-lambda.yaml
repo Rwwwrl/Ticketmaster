@@ -54,6 +54,28 @@ jobs:
             -r build/requirements.txt
           cp -r cognito_pre_signup build/package/
 
+      - name: Read Container service url from ticketmaster service stack
+        id: service-stack
+        run: |
+          SERVICE_URL=$(aws cloudformation describe-stacks \
+            --stack-name ticketmaster-${{ inputs.environment }} \
+            --query "Stacks[0].Outputs[?OutputKey=='ServiceUrl'].OutputValue" \
+            --output text \
+            --region ${{ vars.AWS_REGION }})
+          echo "service_url=https://${SERVICE_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy Lambda CloudFormation stack
+        run: |
+          aws cloudformation deploy \
+            --stack-name ${{ inputs.lambda_name }} \
+            --template-file ${{ inputs.lambda_path }}/lambda.yaml \
+            --parameter-overrides \
+                Environment=${{ inputs.environment }} \
+                TicketmasterApiUrl=${{ steps.service-stack.outputs.service_url }} \
+            --capabilities CAPABILITY_IAM \
+            --no-fail-on-empty-changeset \
+            --region ${{ vars.AWS_REGION }}
+
       - uses: aws-actions/aws-lambda-deploy@v1.0.4
         with:
           function-name: ${{ inputs.lambda_name }}
