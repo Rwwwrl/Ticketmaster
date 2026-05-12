@@ -38,12 +38,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Session.configure(bind=engine)
     app.state.sqlmodel_engine = engine
 
-    bind_task_role_to_aws_session(
-        region=settings.aws_task_role.region,
-        access_key_id=settings.aws_task_role.access_key_id,
-        secret_access_key=settings.aws_task_role.secret_access_key,
-        session_token=settings.aws_task_role.session_token,
-    )
+    if settings.aws_task_role is not None:
+        bind_task_role_to_aws_session(
+            region=settings.aws_task_role.region,
+            access_key_id=settings.aws_task_role.access_key_id,
+            secret_access_key=settings.aws_task_role.secret_access_key,
+            session_token=settings.aws_task_role.session_token,
+        )
 
     yield
 
