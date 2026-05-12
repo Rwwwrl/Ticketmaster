@@ -28,7 +28,7 @@ jobs:
     secrets: inherit
 
   deploy-cognito-pre-signup-lambda:
-    needs: [deploy-ticketmaster]
+    needs: [publish-libs]
     uses: ./.github/workflows/called-deploy-lambda.yaml
     with:
       environment: test-eu
