@@ -76,7 +76,7 @@ jobs:
             --no-fail-on-empty-changeset \
             --region ${{ vars.AWS_REGION }}
 
-      - uses: aws-actions/aws-lambda-deploy@v1.0.4
+      - uses: aws-actions/aws-lambda-deploy@v1.1.1
         with:
           function-name: ${{ inputs.lambda_name }}
           code-artifacts-dir: ${{ inputs.lambda_path }}/build/package
