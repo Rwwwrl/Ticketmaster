@@ -32,6 +32,7 @@ env = [
     "LAMBDA_JWT_KMS_KEY_ARN=arn:aws:kms:eu-central-1:000000000000:key/test-placeholder",
     "LAMBDA_JWT_AUDIENCE=ticketmaster-backend",
     "LAMBDA_JWT_ISSUER=ticketmaster-cognito-pre-signup",
+    "COGNITO_AUDIENCE=ticketmaster-cognito-client-id",
 ]
 testpaths = ["src/libs/libs/tests", "src/ticketmaster/ticketmaster/tests"]
 
