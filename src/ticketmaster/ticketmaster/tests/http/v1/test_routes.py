@@ -13,7 +13,7 @@ async def test_list_events_page_when_no_events_in_db(async_client: AsyncClient) 
     response = await async_client.get(url="/v1/events/")
 
     assert response.status_code == 200
-    assert response.json() == {"items": [], "page": 1, "page_size": 20, "total": 0}
+    assert response.json() == {"items": [], "page_size": 20, "next_cursor": None}
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -38,53 +38,59 @@ async def test_list_events_page_when_events_exist_sorted_by_start_at_then_id(
     assert response.status_code == 200
 
     page = EventsPageResponseSchema(**response.json())
-    assert page.total == 2
-    assert page.page == 1
     assert page.page_size == 20
+    assert page.next_cursor is None
     assert [item.id for item in page.items] == [earlier.id, later.id]
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_list_events_page_when_page_size_is_one(async_client: AsyncClient) -> None:
+async def test_list_events_page_when_cursor_has_more_pages(async_client: AsyncClient) -> None:
     first = EventFactory(start_at=datetime(2026, 5, 1, tzinfo=UTC))
     second = EventFactory(start_at=datetime(2026, 5, 2, tzinfo=UTC))
     third = EventFactory(start_at=datetime(2026, 5, 3, tzinfo=UTC))
     await insert(first, second, third)
 
-    r1 = await async_client.get(url="/v1/events/", params={"page": 1, "page_size": 1})
-    r2 = await async_client.get(url="/v1/events/", params={"page": 2, "page_size": 1})
-    r3 = await async_client.get(url="/v1/events/", params={"page": 3, "page_size": 1})
+    first_response = await async_client.get(url="/v1/events/", params={"page_size": 1})
+    first_page = EventsPageResponseSchema(**first_response.json())
 
-    p1 = EventsPageResponseSchema(**r1.json())
-    p2 = EventsPageResponseSchema(**r2.json())
-    p3 = EventsPageResponseSchema(**r3.json())
+    second_response = await async_client.get(
+        url="/v1/events/",
+        params={"cursor": first_page.next_cursor, "page_size": 1},
+    )
+    second_page = EventsPageResponseSchema(**second_response.json())
 
-    assert [r1.status_code, r2.status_code, r3.status_code] == [200, 200, 200]
-    assert [p1.items[0].id, p2.items[0].id, p3.items[0].id] == [first.id, second.id, third.id]
-    assert p1.total == p2.total == p3.total == 3
+    third_response = await async_client.get(
+        url="/v1/events/",
+        params={"cursor": second_page.next_cursor, "page_size": 1},
+    )
+    third_page = EventsPageResponseSchema(**third_response.json())
 
-
-@pytest.mark.asyncio(loop_scope="session")
-async def test_list_events_page_when_page_beyond_range(async_client: AsyncClient) -> None:
-    await insert(EventFactory(start_at=datetime(2026, 5, 1, tzinfo=UTC)))
-
-    response = await async_client.get(url="/v1/events/", params={"page": 5, "page_size": 10})
-
-    assert response.status_code == 200
-    page = EventsPageResponseSchema(**response.json())
-    assert page.items == []
-    assert page.total == 1
-    assert page.page == 5
+    assert [first_response.status_code, second_response.status_code, third_response.status_code] == [200, 200, 200]
+    assert first_page.next_cursor is not None
+    assert second_page.next_cursor is not None
+    assert third_page.next_cursor is None
+    assert [first_page.items[0].id, second_page.items[0].id, third_page.items[0].id] == [
+        first.id,
+        second.id,
+        third.id,
+    ]
 
 
 @pytest.mark.asyncio(loop_scope="session")
 @pytest.mark.parametrize(
     "params",
-    [{"page": 0}, {"page": -1}, {"page_size": 0}, {"page_size": 101}],
+    [{"page_size": 0}, {"page_size": 101}],
 )
 async def test_list_events_page_when_params_invalid(
     async_client: AsyncClient,
     params: dict,
 ) -> None:
     response = await async_client.get(url="/v1/events/", params=params)
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_list_events_page_when_cursor_is_invalid(async_client: AsyncClient) -> None:
+    response = await async_client.get(url="/v1/events/", params={"cursor": "not-a-cursor"})
+
     assert response.status_code == 422

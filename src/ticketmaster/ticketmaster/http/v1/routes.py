@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from ticketmaster.http.v1.dependencies import validate_lambda_jwt
 from ticketmaster.http.v1.schemas import request_schemas, response_schemas
+from ticketmaster.http.v1.utils import decode_event_cursor
 from ticketmaster.repositories import EventRepository, UserRepository
 from ticketmaster.serializers import ToEventResponseSchemaSerializer, ToUserResponseSchemaSerializer
 
@@ -45,19 +46,19 @@ async def create_user_fallback(
     response_model=response_schemas.EventsPageResponseSchema,
 )
 async def list_events_page(
-    page: Annotated[int, Query(ge=1)] = 1,
+    cursor: Annotated[str | None, Query()] = None,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> response_schemas.EventsPageResponseSchema:
+    decoded_cursor = decode_event_cursor(cursor=cursor)
     async with Session() as session, session.begin():
-        items, total = await EventRepository.get_all_paginated(
+        items, next_cursor_pair = await EventRepository.list_after_cursor(
             session=session,
-            page=page,
+            cursor=decoded_cursor,
             page_size=page_size,
         )
 
     return response_schemas.EventsPageResponseSchema(
         items=[ToEventResponseSchemaSerializer.serialize(dto=dto) for dto in items],
-        page=page,
         page_size=page_size,
-        total=total,
+        next_cursor=next_cursor_pair.encode() if next_cursor_pair is not None else None,
     )

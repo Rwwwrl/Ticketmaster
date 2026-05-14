@@ -1,6 +1,12 @@
+import base64
+import binascii
+import json
+from datetime import datetime
+from typing import Self
 from uuid import UUID
 
-from sqlalchemy import func
+from libs.common.schemas.dto import DTO
+from sqlalchemy import tuple_
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -9,30 +15,44 @@ from ticketmaster.models import Event, User
 from ticketmaster.schemas.dtos import BaseEventDTO, BaseUserDTO
 
 
+class EventCursorDTO(DTO):
+    started_at: datetime
+    id: int
+
+    def encode(self) -> str:
+        raw = json.dumps(obj={"started_at": self.started_at.isoformat(), "_id": self.id}).encode()
+        return base64.urlsafe_b64encode(s=raw).decode()
+
+    @classmethod
+    def decode(cls, cursor: str) -> Self:
+        try:
+            raw = base64.b64decode(s=cursor.encode(), altchars=b"-_", validate=True)
+            payload = json.loads(raw)
+            return cls(started_at=datetime.fromisoformat(payload["started_at"]), id=int(payload["_id"]))
+        except binascii.Error, KeyError, TypeError, ValueError:
+            raise ValueError("Invalid event cursor")
+
+
 class EventRepository:
     @classmethod
-    async def get_all_paginated(
+    async def list_after_cursor(
         cls,
         session: AsyncSession,
-        page: int,
+        cursor: EventCursorDTO | None,
         page_size: int,
-    ) -> tuple[list[BaseEventDTO], int]:
-        """Return a slice of events for the requested page together with the total row count.
+    ) -> tuple[list[BaseEventDTO], EventCursorDTO | None]:
+        statement = select(Event).order_by(Event.start_at, Event.id).limit(page_size + 1)
+        if cursor is not None:
+            statement = statement.where(tuple_(Event.start_at, Event.id) > tuple_(cursor.started_at, cursor.id))
 
-        Ordered by (start_at, id) ASC so pages are stable across requests.
-        The total is returned alongside the items so the caller can expose page metadata
-        without issuing a second query.
-        """
-        offset = (page - 1) * page_size
-        items_result = await session.exec(
-            select(Event).order_by(Event.start_at, Event.id).offset(offset).limit(page_size)
-        )
-        items = [BaseEventDTO.from_sqlmodel(model=event) for event in items_result.all()]
+        items_result = await session.exec(statement)
+        rows = items_result.all()
+        has_next_page = len(rows) > page_size
+        kept_rows = rows[:page_size]
+        items = [BaseEventDTO.from_sqlmodel(model=event) for event in kept_rows]
+        next_cursor = EventCursorDTO(started_at=items[-1].start_at, id=items[-1].id) if has_next_page else None
 
-        total_result = await session.exec(select(func.count(Event.id)))
-        total = total_result.one()
-
-        return items, total
+        return items, next_cursor
 
 
 class UserRepository:

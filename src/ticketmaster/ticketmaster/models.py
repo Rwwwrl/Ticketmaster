@@ -10,7 +10,10 @@ from ticketmaster.enums import EventTypeEnum, TicketStatusEnum
 
 class Event(BaseSqlModel, table=True):
     __tablename__ = "event"
-    __table_args__ = (PrimaryKeyConstraint("id"),)
+    __table_args__ = (
+        PrimaryKeyConstraint("id"),
+        Index("ix_event_start_at_id", "start_at", "id"),
+    )
 
     id: int | None = Field(default=None, sa_column=Column(Integer, Identity()))
     name: str

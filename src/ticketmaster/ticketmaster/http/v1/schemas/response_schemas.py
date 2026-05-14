@@ -16,9 +16,8 @@ class EventResponseSchema(BaseResponseSchema):
 
 class EventsPageResponseSchema(BaseResponseSchema):
     items: list[EventResponseSchema]
-    page: int
     page_size: int
-    total: int
+    next_cursor: str | None
 
 
 class UserResponseSchema(BaseResponseSchema):
