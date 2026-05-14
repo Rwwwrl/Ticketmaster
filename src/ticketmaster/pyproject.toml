@@ -1,19 +1,21 @@
 [tool.poetry]
 name = "ticketmaster"
-version = "0.3.0"
+version = "0.4.0"
 description = "Ticketmaster monolith service"
 authors = ["Aleksei Sosov <forgithublesh@yandex.ru>"]
 packages = [{ include = "ticketmaster" }]
 
 [tool.poetry.dependencies]
 python = "^3.14"
-ticketmaster-libs = "^0.3.0"
+ticketmaster-libs = "^0.4.0"
 fastapi = {extras = ["standard"], version = "^0.136.0"}
 uvicorn = "^0.44.0"
 pyjwt = "^2.12.1"
 cryptography = "^48.0.0"
 email-validator = "^2.3.0"
 aioboto3 = "^15.5.0"
+respx = "^0.23.1"
+factory-boy = "^3.3.3"
 
 [build-system]
 requires = ["poetry-core"]

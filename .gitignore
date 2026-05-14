@@ -172,6 +172,9 @@ justfile.local
 .claude/settings.local.json
 .claude/skills/
 .claude/commands/
+.codex/commands/
+.codex/rules/
+.codex/skills/
 .mcp.json
 .env.infra
 documentation/

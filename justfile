@@ -29,7 +29,7 @@ aws-down env="test-eu" profile="tm-test":
     #!/usr/bin/env bash
     set -euo pipefail
     export AWS_PROFILE={{profile}}
-    for stack in "ticketmaster-{{env}}" "ticketmaster-{{env}}-migrate"; do
+    for stack in "ticketmaster-cognito-pre-signup-{{env}}" "ticketmaster-{{env}}" "ticketmaster-{{env}}-migrate"; do
         echo "Deleting CloudFormation stack '$stack'..."
         aws cloudformation delete-stack --stack-name "$stack"
         aws cloudformation wait stack-delete-complete --stack-name "$stack"

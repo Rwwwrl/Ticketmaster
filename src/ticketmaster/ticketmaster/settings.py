@@ -25,9 +25,11 @@ class Settings(SentrySettingsMixin, LoggingSettingsMixin, PostgresSettingsMixin,
     # NOTE @sosov: Only needed for local dev. In prod, boto3 picks up the task role
     # credentials from ECS-injected env vars automatically, so the whole block can be None.
     aws_task_role: AWSTaskRoleSettings | None = None
+    aws_region: str
     lambda_jwt_kms_key_arn: str
     lambda_jwt_audience: str
     lambda_jwt_issuer: str
+    cognito_audience: str
 
 
 settings = Settings()

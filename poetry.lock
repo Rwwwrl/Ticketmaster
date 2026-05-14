@@ -557,6 +557,29 @@ files = [
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
+name = "cognito-pre-signup-lambda"
+version = "0.1.0"
+description = "Cognito PreSignUp trigger — calls ticketmaster /v1/users/ to create the DB row before Cognito persists the identity."
+optional = false
+python-versions = "^3.14"
+files = []
+develop = true
+
+[package.dependencies]
+boto3 = ">=1.40.46,<1.40.62"
+cryptography = "^48.0.0"
+httpx = "^0.28.1"
+pyjwt = "^2.12.1"
+pytest = "^9.0.3"
+pytest-env = "^1.6.0"
+respx = "^0.23.1"
+tenacity = "^9.0.0"
+
+[package.source]
+type = "directory"
+url = "src/lambdas/cognito_pre_signup"
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -2540,13 +2563,13 @@ six = ">=1.5"
 
 [[package]]
 name = "python-discovery"
-version = "1.3.0"
+version = "1.3.1"
 description = "Python interpreter discovery"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "python_discovery-1.3.0-py3-none-any.whl", hash = "sha256:441d9ced3dfce36e113beb35ca302c71c7ef06f3c0f9c227a0b9bb3bd49b9e9f"},
-    {file = "python_discovery-1.3.0.tar.gz", hash = "sha256:d098f1e86be5d45fe4d14bf1029294aabbd332f4321179dec85e76cddce834b0"},
+    {file = "python_discovery-1.3.1-py3-none-any.whl", hash = "sha256:ed188687ebb3b82c01a17cd5ac62fc94d9f6487a7f1a0f9dfe89753fec91039c"},
+    {file = "python_discovery-1.3.1.tar.gz", hash = "sha256:62f6db28064c9613e7ca76cb3f00c38c839a07c31c00dfe7ed0986493d2150a6"},
 ]
 
 [package.dependencies]
@@ -2554,7 +2577,7 @@ filelock = ">=3.15.4"
 platformdirs = ">=4.3.6,<5"
 
 [package.extras]
-docs = ["furo (>=2025.12.19)", "sphinx (>=9.1)", "sphinx-autodoc-typehints (>=3.6.3)", "sphinxcontrib-mermaid (>=2)"]
+docs = ["furo (>=2025.12.19)", "sphinx (>=9.1)", "sphinx-autodoc-typehints (>=3.6.3)", "sphinxcontrib-mermaid (>=2)", "sphinxcontrib-towncrier (>=0.4)", "towncrier (>=25.8)"]
 testing = ["covdefaults (>=2.3)", "coverage (>=7.5.4)", "pytest (>=8.3.5)", "pytest-mock (>=3.14)", "setuptools (>=75.1)"]
 
 [[package]]
@@ -2663,6 +2686,20 @@ files = [
     {file = "pyyaml-6.0.3-cp39-cp39-win_amd64.whl", hash = "sha256:2e71d11abed7344e42a8849600193d15b6def118602c4c176f748e4583246007"},
     {file = "pyyaml-6.0.3.tar.gz", hash = "sha256:d76623373421df22fb4cf8817020cbb7ef15c725b9d5e45f17e189bfc384190f"},
 ]
+
+[[package]]
+name = "respx"
+version = "0.23.1"
+description = "A utility for mocking out the Python HTTPX and HTTP Core libraries."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "respx-0.23.1-py2.py3-none-any.whl", hash = "sha256:b18004b029935384bccfa6d7d9d74b4ec9af73a081cc28600fffc0447f4b8c1a"},
+    {file = "respx-0.23.1.tar.gz", hash = "sha256:242dcc6ce6b5b9bf621f5870c82a63997e8e82bc7c947f9ffe272b8f3dd5a780"},
+]
+
+[package.dependencies]
+httpx = ">=0.25.0"
 
 [[package]]
 name = "rich"
@@ -3144,8 +3181,23 @@ anyio = ">=3.6.2,<5"
 full = ["httpx (>=0.27.0,<0.29.0)", "itsdangerous", "jinja2", "python-multipart (>=0.0.18)", "pyyaml"]
 
 [[package]]
+name = "tenacity"
+version = "9.1.4"
+description = "Retry code until it succeeds"
+optional = false
+python-versions = ">=3.10"
+files = [
+    {file = "tenacity-9.1.4-py3-none-any.whl", hash = "sha256:6095a360c919085f28c6527de529e76a06ad89b23659fa881ae0649b867a9d55"},
+    {file = "tenacity-9.1.4.tar.gz", hash = "sha256:adb31d4c263f2bd041081ab33b498309a57c77f9acf2db65aadf0898179cf93a"},
+]
+
+[package.extras]
+doc = ["reno", "sphinx"]
+test = ["pytest", "tornado (>=4.5)", "typeguard"]
+
+[[package]]
 name = "ticketmaster"
-version = "0.3.0"
+version = "0.4.0"
 description = "Ticketmaster monolith service"
 optional = false
 python-versions = "^3.14"
@@ -3156,9 +3208,16 @@ develop = true
 aioboto3 = "^15.5.0"
 cryptography = "^48.0.0"
 email-validator = "^2.3.0"
+factory-boy = "^3.3.3"
 fastapi = {version = "^0.136.0", extras = ["standard"]}
 pyjwt = "^2.12.1"
-ticketmaster-libs = "^0.3.0"
+pytest = "^9.0.3"
+pytest-asyncio = "^1.3.0"
+pytest-cov = "^5.0.0"
+pytest-env = "^1.6.0"
+respx = "^0.23.1"
+ruff = "^0.15.10"
+ticketmaster-libs = "^0.4.0"
 uvicorn = "^0.44.0"
 
 [package.source]
@@ -3167,7 +3226,7 @@ url = "src/ticketmaster"
 
 [[package]]
 name = "ticketmaster-libs"
-version = "0.3.0"
+version = "0.4.0"
 description = "Shared library for the ticketmaster service"
 optional = false
 python-versions = "^3.14"
@@ -3178,7 +3237,6 @@ develop = true
 aioboto3 = "^15.5.0"
 alembic = "^1.18.4"
 asyncpg = "^0.31.0"
-factory-boy = "^3.3.3"
 fastapi = "^0.136.0"
 greenlet = "^3.4.0"
 httpx = "^0.28.1"
@@ -3186,8 +3244,12 @@ psycopg = "^3.3.3"
 psycopg-binary = "^3.3.3"
 pydantic = "^2.13.1"
 pydantic-settings = "^2.13.1"
+pytest = "^9.0.3"
 pytest-asyncio = "^1.3.0"
+pytest-cov = "^5.0.0"
+pytest-env = "^1.6.0"
 pyyaml = "^6.0.3"
+ruff = "^0.15.10"
 sentry-sdk = "^2.58.0"
 sqlmodel = "^0.0.38"
 
@@ -3370,20 +3432,20 @@ test = ["aiohttp (>=3.10.5)", "flake8 (>=6.1,<7.0)", "mypy (>=0.800)", "psutil",
 
 [[package]]
 name = "virtualenv"
-version = "21.3.1"
+version = "21.3.3"
 description = "Virtual Python Environment builder"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "virtualenv-21.3.1-py3-none-any.whl", hash = "sha256:d1a71cf58f2f9228fff23a1f6ec15d39785c6b32e03658d104974247145edd35"},
-    {file = "virtualenv-21.3.1.tar.gz", hash = "sha256:c2305bc1fddeec40699b8370d13f8d431b0701f00ce895061ce493aeded4426b"},
+    {file = "virtualenv-21.3.3-py3-none-any.whl", hash = "sha256:7d5987d8369e098e41406efb780a3d4ca79280097293899e351a6407ee153ab3"},
+    {file = "virtualenv-21.3.3.tar.gz", hash = "sha256:f5bda277e553b1c2b3c1a8debfc30496e1288cc93ce6b7b71b3280047e317328"},
 ]
 
 [package.dependencies]
 distlib = ">=0.3.7,<1"
 filelock = {version = ">=3.24.2,<4", markers = "python_version >= \"3.10\""}
 platformdirs = ">=3.9.1,<5"
-python-discovery = ">=1.2.2"
+python-discovery = ">=1.3.1"
 
 [[package]]
 name = "watchfiles"
@@ -3822,4 +3884,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.14"
-content-hash = "a144ca9d1f23562cc349be1f113b94fee28ae425bbe40e21c34553f9768d64f4"
+content-hash = "1bfe8992582f0320471de86d067efb264012354f1254ac2f2f737834e9ad332f"
