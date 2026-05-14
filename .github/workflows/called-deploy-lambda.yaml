@@ -43,8 +43,8 @@ jobs:
         working-directory: ${{ inputs.lambda_path }}
         run: |
           rm -rf build && mkdir -p build/package
-          poetry export --without dev --without-hashes -f requirements.txt -o build/requirements.txt
-          # Lambda runtime ships boto3/botocore — pull only what's missing, with manylinux wheels.
+          poetry export --without-hashes -f requirements.txt -o build/requirements.txt
+          # Install dependencies with manylinux wheels for the Lambda runtime.
           pip install \
             --target build/package \
             --platform manylinux2014_x86_64 \
