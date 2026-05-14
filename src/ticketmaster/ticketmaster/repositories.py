@@ -4,6 +4,7 @@ from sqlalchemy import func
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from ticketmaster.exceptions import UserNotFoundException
 from ticketmaster.models import Event, User
 from ticketmaster.schemas.dtos import BaseEventDTO, BaseUserDTO
 
@@ -48,4 +49,18 @@ class UserRepository:
         session.add(user)
         await session.flush()
         await session.refresh(user)
+        return BaseUserDTO.from_sqlmodel(model=user)
+
+    @classmethod
+    async def get_by_pool_and_external_id(
+        cls,
+        session: AsyncSession,
+        pool_id: str,
+        external_id: str,
+    ) -> BaseUserDTO:
+        user = await session.scalar(select(User).where(User.pool_id == pool_id, User.external_id == external_id))
+
+        if user is None:
+            raise UserNotFoundException(f"User not found for pool_id={pool_id} external_id={external_id}")
+
         return BaseUserDTO.from_sqlmodel(model=user)

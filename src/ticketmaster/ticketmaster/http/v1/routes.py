@@ -12,30 +12,6 @@ from ticketmaster.serializers import ToEventResponseSchemaSerializer, ToUserResp
 v1_router = APIRouter()
 
 
-@v1_router.get(
-    "/events/",
-    status_code=status.HTTP_200_OK,
-    response_model=response_schemas.EventsPageResponseSchema,
-)
-async def list_events_page(
-    page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
-) -> response_schemas.EventsPageResponseSchema:
-    async with Session() as session, session.begin():
-        items, total = await EventRepository.get_all_paginated(
-            session=session,
-            page=page,
-            page_size=page_size,
-        )
-
-    return response_schemas.EventsPageResponseSchema(
-        items=[ToEventResponseSchemaSerializer.serialize(dto=dto) for dto in items],
-        page=page,
-        page_size=page_size,
-        total=total,
-    )
-
-
 @v1_router.post(
     "/users/",
     status_code=status.HTTP_201_CREATED,
@@ -61,3 +37,27 @@ async def create_user_fallback(
         )
 
     return ToUserResponseSchemaSerializer.serialize(dto=dto)
+
+
+@v1_router.get(
+    "/events/",
+    status_code=status.HTTP_200_OK,
+    response_model=response_schemas.EventsPageResponseSchema,
+)
+async def list_events_page(
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> response_schemas.EventsPageResponseSchema:
+    async with Session() as session, session.begin():
+        items, total = await EventRepository.get_all_paginated(
+            session=session,
+            page=page,
+            page_size=page_size,
+        )
+
+    return response_schemas.EventsPageResponseSchema(
+        items=[ToEventResponseSchemaSerializer.serialize(dto=dto) for dto in items],
+        page=page,
+        page_size=page_size,
+        total=total,
+    )
