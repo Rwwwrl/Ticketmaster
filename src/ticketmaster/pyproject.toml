@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ticketmaster"
-version = "0.4.1"
+version = "0.5.0"
 description = "Ticketmaster monolith service"
 authors = ["Aleksei Sosov <forgithublesh@yandex.ru>"]
 packages = [{ include = "ticketmaster" }]
