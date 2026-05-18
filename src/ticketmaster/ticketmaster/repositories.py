@@ -6,6 +6,7 @@ from typing import Self
 from uuid import UUID
 
 from libs.common.schemas.dto import DTO
+from libs.datetime_ext.utils import utc_now
 from sqlalchemy import and_, or_, tuple_, update
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -95,6 +96,7 @@ class TicketRepository:
                 status=TicketStatusEnum.RESERVED,
                 reserved_at=now,
                 user_id=user_id,
+                updated_at=utc_now(),
             )
         )
         result = await session.exec(stmt)

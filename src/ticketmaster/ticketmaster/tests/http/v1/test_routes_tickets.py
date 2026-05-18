@@ -51,6 +51,7 @@ async def test_reserve_ticket_when_available_returns_204(
     assert persisted.status == TicketStatusEnum.RESERVED
     assert persisted.user_id == override_user_jwt.id
     assert before <= persisted.reserved_at <= after
+    assert before <= persisted.updated_at <= after
 
 
 @pytest.mark.asyncio(loop_scope="session")
