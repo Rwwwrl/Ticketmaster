@@ -4,8 +4,8 @@ from uuid import UUID
 
 from libs.common.schemas.dto import DTO
 
-from ticketmaster.enums import EventTypeEnum
-from ticketmaster.models import Event, User
+from ticketmaster.enums import EventTypeEnum, TicketStatusEnum
+from ticketmaster.models import Event, Ticket, User
 
 
 class BaseEventDTO(DTO):
@@ -17,6 +17,21 @@ class BaseEventDTO(DTO):
 
     @classmethod
     def from_sqlmodel(cls, model: Event) -> Self:
+        return cls(**model.model_dump())
+
+
+class BaseTicketDTO(DTO):
+    id: int
+    event_id: int
+    user_id: int | None
+    status: TicketStatusEnum
+    reserved_at: datetime | None
+    booked_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+    @classmethod
+    def from_sqlmodel(cls, model: Ticket) -> Self:
         return cls(**model.model_dump())
 
 

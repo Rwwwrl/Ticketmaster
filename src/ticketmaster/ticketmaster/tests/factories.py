@@ -1,7 +1,7 @@
 import factory
 from libs.datetime_ext.utils import utc_now
-from ticketmaster.enums import EventTypeEnum
-from ticketmaster.models import Event, User
+from ticketmaster.enums import EventTypeEnum, TicketStatusEnum
+from ticketmaster.models import Event, Ticket, User
 
 
 class EventFactory(factory.Factory):
@@ -22,3 +22,14 @@ class UserFactory(factory.Factory):
     pool_id = "eu-central-1_aB12cDEFg"
     email = factory.Sequence(lambda n: f"user{n}@example.com")
     external_id = factory.Sequence(lambda n: f"external-sub-{n}")
+
+
+class TicketFactory(factory.Factory):
+    class Meta:
+        model = Ticket
+
+    event_id: int
+    user_id = None
+    status = TicketStatusEnum.AVAILABLE
+    reserved_at = None
+    booked_at = None
