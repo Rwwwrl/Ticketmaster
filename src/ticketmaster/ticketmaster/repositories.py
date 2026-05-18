@@ -102,6 +102,39 @@ class TicketRepository:
         result = await session.exec(stmt)
         return result.rowcount == 1
 
+    @classmethod
+    async def book(
+        cls,
+        session: AsyncSession,
+        event_id: int,
+        ticket_id: int,
+        user_id: int,
+        now: datetime,
+        reservation_ttl: timedelta,
+    ) -> bool:
+        """Confirm a fresh reservation held by ``user_id``; returns ``True`` iff the row was updated.
+
+        The conditional WHERE flips RESERVED→BOOKED only when the same user still holds a
+        reservation that has not lapsed, so a stale or third-party reservation cannot be booked.
+        """
+        stmt = (
+            update(Ticket)
+            .where(
+                Ticket.id == ticket_id,
+                Ticket.event_id == event_id,
+                Ticket.user_id == user_id,
+                Ticket.status == TicketStatusEnum.RESERVED,
+                Ticket.reserved_at > now - reservation_ttl,
+            )
+            .values(
+                status=TicketStatusEnum.BOOKED,
+                booked_at=now,
+                updated_at=utc_now(),
+            )
+        )
+        result = await session.exec(stmt)
+        return result.rowcount == 1
+
 
 class UserRepository:
     @classmethod

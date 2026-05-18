@@ -92,3 +92,28 @@ async def reserve_ticket(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticket not reservable")
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@v1_router.post(
+    "/events/{event_id}/tickets/{ticket_id}/book",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def book_ticket(
+    event_id: int,
+    ticket_id: int,
+    user: Annotated[BaseUserDTO, Depends(validate_user_jwt)],
+) -> None:
+    async with Session() as session, session.begin():
+        ticket_booked = await TicketRepository.book(
+            session=session,
+            event_id=event_id,
+            ticket_id=ticket_id,
+            user_id=user.id,
+            now=utc_now(),
+            reservation_ttl=_RESERVATION_TTL,
+        )
+
+    if not ticket_booked:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticket not bookable")
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
