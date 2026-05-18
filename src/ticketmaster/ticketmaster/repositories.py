@@ -1,18 +1,19 @@
 import base64
 import binascii
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Self
 from uuid import UUID
 
 from libs.common.schemas.dto import DTO
-from sqlalchemy import tuple_
+from sqlalchemy import and_, or_, tuple_, update
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from ticketmaster.enums import TicketStatusEnum
 from ticketmaster.exceptions import UserNotFoundException
-from ticketmaster.models import Event, User
-from ticketmaster.schemas.dtos import BaseEventDTO, BaseUserDTO
+from ticketmaster.models import Event, Ticket, User
+from ticketmaster.schemas.dtos import BaseEventDTO, BaseTicketDTO, BaseUserDTO
 
 
 class EventCursorDTO(DTO):
@@ -53,6 +54,51 @@ class EventRepository:
         next_cursor = EventCursorDTO(started_at=items[-1].start_at, id=items[-1].id) if has_next_page else None
 
         return items, next_cursor
+
+
+class TicketRepository:
+    @classmethod
+    async def get_by_id(cls, session: AsyncSession, ticket_id: int) -> BaseTicketDTO:
+        result = await session.exec(select(Ticket).where(Ticket.id == ticket_id))
+        return BaseTicketDTO.from_sqlmodel(model=result.one())
+
+    @classmethod
+    async def reserve(
+        cls,
+        session: AsyncSession,
+        event_id: int,
+        ticket_id: int,
+        user_id: int,
+        now: datetime,
+        reservation_ttl: timedelta,
+    ) -> bool:
+        """Conditionally claim a ticket for ``user_id``; returns ``True`` iff the row was updated.
+
+        The single UPDATE flips status to RESERVED only when the ticket is AVAILABLE or
+        held by a stale reservation older than ``reservation_ttl`` — that conditional WHERE
+        is what prevents two concurrent callers from reserving the same ticket.
+        """
+        stmt = (
+            update(Ticket)
+            .where(
+                Ticket.id == ticket_id,
+                Ticket.event_id == event_id,
+                or_(
+                    Ticket.status == TicketStatusEnum.AVAILABLE,
+                    and_(
+                        Ticket.status == TicketStatusEnum.RESERVED,
+                        Ticket.reserved_at < now - reservation_ttl,
+                    ),
+                ),
+            )
+            .values(
+                status=TicketStatusEnum.RESERVED,
+                reserved_at=now,
+                user_id=user_id,
+            )
+        )
+        result = await session.exec(stmt)
+        return result.rowcount == 1
 
 
 class UserRepository:
