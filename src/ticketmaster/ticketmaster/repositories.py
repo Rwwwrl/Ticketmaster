@@ -7,7 +7,7 @@ from uuid import UUID
 
 from libs.common.schemas.dto import DTO
 from libs.datetime_ext.utils import utc_now
-from sqlalchemy import and_, or_, tuple_, update
+from sqlalchemy import and_, func, or_, tuple_, update
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -35,6 +35,24 @@ class EventCursorDTO(DTO):
             raise ValueError("Invalid event cursor")
 
 
+class EventSearchCursorDTO(DTO):
+    rank: float
+    id: int
+
+    def encode(self) -> str:
+        raw = json.dumps(obj={"rank": self.rank, "_id": self.id}).encode()
+        return base64.urlsafe_b64encode(s=raw).decode()
+
+    @classmethod
+    def decode(cls, cursor: str) -> Self:
+        try:
+            raw = base64.b64decode(s=cursor.encode(), altchars=b"-_", validate=True)
+            payload = json.loads(raw)
+            return cls(rank=float(payload["rank"]), id=int(payload["_id"]))
+        except binascii.Error, KeyError, TypeError, ValueError:
+            raise ValueError("Invalid event search cursor")
+
+
 class EventRepository:
     @classmethod
     async def list_after_cursor(
@@ -54,6 +72,42 @@ class EventRepository:
         items = [BaseEventDTO.from_sqlmodel(model=event) for event in kept_rows]
         next_cursor = EventCursorDTO(started_at=items[-1].start_at, id=items[-1].id) if has_next_page else None
 
+        return items, next_cursor
+
+    @classmethod
+    async def search_after_cursor(
+        cls,
+        session: AsyncSession,
+        q: str,
+        cursor: EventSearchCursorDTO | None,
+        page_size: int,
+    ) -> tuple[list[BaseEventDTO], EventSearchCursorDTO | None]:
+        tsquery = func.websearch_to_tsquery("english", q)
+        rank_expr = func.ts_rank(Event.search_vector, tsquery)
+
+        statement = (
+            select(Event, rank_expr.label("rank"))
+            .where(Event.search_vector.op("@@")(tsquery))
+            .order_by(rank_expr.desc(), Event.id.asc())
+            .limit(page_size + 1)
+        )
+        if cursor is not None:
+            statement = statement.where(
+                or_(
+                    rank_expr < cursor.rank,
+                    and_(rank_expr == cursor.rank, Event.id > cursor.id),
+                )
+            )
+
+        rows = (await session.exec(statement)).all()
+        has_next_page = len(rows) > page_size
+        kept_rows = rows[:page_size]
+        items = [BaseEventDTO.from_sqlmodel(model=event) for event, _rank in kept_rows]
+        if has_next_page:
+            last_event, last_rank = kept_rows[-1]
+            next_cursor = EventSearchCursorDTO(rank=last_rank, id=last_event.id)
+        else:
+            next_cursor = None
         return items, next_cursor
 
 

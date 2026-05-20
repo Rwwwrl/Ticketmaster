@@ -9,9 +9,28 @@ from libs.aws.session import aws_session
 from libs.sqlmodel_ext import Session
 
 from ticketmaster.exceptions import UserNotFoundException
-from ticketmaster.repositories import UserRepository
+from ticketmaster.repositories import EventCursorDTO, EventSearchCursorDTO, UserRepository
 from ticketmaster.schemas.dtos import BaseUserDTO
 from ticketmaster.settings import settings
+
+
+def decode_event_cursor(cursor: str | None) -> EventCursorDTO | None:
+    if cursor is None:
+        return None
+    try:
+        return EventCursorDTO.decode(cursor=cursor)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Invalid cursor")
+
+
+def decode_event_search_cursor(cursor: str | None) -> EventSearchCursorDTO | None:
+    if cursor is None:
+        return None
+    try:
+        return EventSearchCursorDTO.decode(cursor=cursor)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Invalid cursor")
+
 
 _JWT_ALGORITHM = "PS256"
 _COGNITO_JWT_ALGORITHM = "RS256"

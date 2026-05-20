@@ -6,9 +6,13 @@ from libs.datetime_ext.utils import utc_now
 from libs.sqlmodel_ext import Session
 from sqlalchemy.exc import IntegrityError
 
-from ticketmaster.http.v1.dependencies import validate_lambda_jwt, validate_user_jwt
+from ticketmaster.http.v1.dependencies import (
+    decode_event_cursor,
+    decode_event_search_cursor,
+    validate_lambda_jwt,
+    validate_user_jwt,
+)
 from ticketmaster.http.v1.schemas import request_schemas, response_schemas
-from ticketmaster.http.v1.utils import decode_event_cursor
 from ticketmaster.repositories import EventRepository, TicketRepository, UserRepository
 from ticketmaster.schemas.dtos import BaseUserDTO
 from ticketmaster.serializers import ToEventResponseSchemaSerializer, ToUserResponseSchemaSerializer
@@ -58,6 +62,33 @@ async def list_events_page(
     async with Session() as session, session.begin():
         items, next_cursor_pair = await EventRepository.list_after_cursor(
             session=session,
+            cursor=decoded_cursor,
+            page_size=page_size,
+        )
+
+    return response_schemas.EventsPageResponseSchema(
+        items=[ToEventResponseSchemaSerializer.serialize(dto=dto) for dto in items],
+        page_size=page_size,
+        next_cursor=next_cursor_pair.encode() if next_cursor_pair is not None else None,
+    )
+
+
+@v1_router.get(
+    "/events/search",
+    status_code=status.HTTP_200_OK,
+    response_model=response_schemas.EventsPageResponseSchema,
+)
+async def search_events(
+    q: Annotated[str, Query(min_length=1, max_length=200)],
+    cursor: Annotated[str | None, Query()] = None,
+    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> response_schemas.EventsPageResponseSchema:
+    decoded_cursor = decode_event_search_cursor(cursor=cursor)
+
+    async with Session() as session, session.begin():
+        items, next_cursor_pair = await EventRepository.search_after_cursor(
+            session=session,
+            q=q,
             cursor=decoded_cursor,
             page_size=page_size,
         )
