@@ -14,9 +14,6 @@ Parameters:
   InfrastructureRoleArn:
     Type: String
     Description: Role ECS uses to manage ALB/TGs/SGs/alarms on our behalf. Passed from a GitHub Actions variable in CI.
-  BackendUrl:
-    Type: String
-    Description: Public URL of the ticketmaster backend (e.g. https://ticketmaster-test-eu.xxxx.amazonaws.com). Provided by CI from the backend stack's outputs.
 
 Resources:
   LogGroup:
@@ -24,14 +21,6 @@ Resources:
     Properties:
       LogGroupName: !Sub '/ecs/frontend-${Environment}'
       RetentionInDays: 14
-
-  BackendUrlParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Name: !Sub '/ticketmaster/frontend/${Environment}/BACKEND_URL'
-      Type: String
-      Value: !Ref BackendUrl
-      Description: Public URL of the ticketmaster backend, consumed by nginx envsubst at container start.
 
   Service:
     Type: AWS::ECS::ExpressGatewayService
