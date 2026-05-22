@@ -72,6 +72,29 @@ export function HomePage() {
         }
     };
 
+    const handleDelete = async () => {
+        if (!window.confirm('This will permanently delete your account. Continue?')) {
+            return;
+        }
+        setPending(true);
+        setResult('');
+        try {
+            const response = await apiFetch('/api/v1/me/', { method: 'DELETE' });
+            if (!response.ok) {
+                setResult(`Delete failed: ${response.status}`);
+                return;
+            }
+            // Backend already called admin_delete_user. signOut() (no global) just clears the
+            // local Amplify token cache — global sign-out would call Cognito's GlobalSignOut
+            // and fail since the user no longer exists.
+            await signOut();
+        } catch (error) {
+            setResult(`error: ${error instanceof Error ? error.message : 'unknown'}`);
+        } finally {
+            setPending(false);
+        }
+    };
+
     if (authState === 'unknown') {
         return (
             <main>
@@ -92,8 +115,11 @@ export function HomePage() {
                     <p>
                         Signed in as <strong>{email}</strong>
                     </p>
-                    <button type="button" onClick={handleSignOut}>
+                    <button type="button" onClick={handleSignOut} disabled={pending}>
                         Sign out
+                    </button>
+                    <button type="button" onClick={handleDelete} disabled={pending}>
+                        Delete account
                     </button>
                 </>
             ) : (
