@@ -99,7 +99,7 @@ export function EventDetailsPage() {
                 <Link to="/events">← Back to events</Link>
             </p>
             <h1>Event #{eventId}</h1>
-            {!isSignedIn && <p className="hint">Sign in (Profile tab) to reserve or book tickets.</p>}
+            {!isSignedIn && <p className="hint">Sign in to reserve or book tickets.</p>}
             {loadError && <p className="error">{loadError}</p>}
             {pending && tickets.length === 0 && <p>Loading…</p>}
             {!pending && tickets.length === 0 && !loadError && <p>No tickets for this event.</p>}

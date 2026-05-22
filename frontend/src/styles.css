@@ -58,6 +58,11 @@ pre {
     font-weight: 600;
 }
 
+.tabbar-action {
+    margin-left: auto;
+    align-self: center;
+}
+
 .event-list {
     list-style: none;
     padding: 0;
