@@ -15,14 +15,6 @@ on:
       run_migrations:
         required: false
         type: boolean
-      extra_parameter_overrides:
-        required: false
-        type: string
-        default: ''
-        description: |
-          Space-separated Key=Value pairs appended to the cloudformation deploy
-          --parameter-overrides list. Used by services that need parameters
-          beyond the standard ImageTag/Environment/*RoleArn set.
 
 jobs:
   build-and-deploy:
@@ -99,7 +91,6 @@ jobs:
                 Environment=${{ inputs.environment }} \
                 ExecutionRoleArn=${{ vars.ECS_EXECUTION_ROLE_ARN }} \
                 InfrastructureRoleArn=${{ vars.ECS_INFRASTRUCTURE_ROLE_ARN }} \
-                ${{ inputs.extra_parameter_overrides }} \
             --capabilities CAPABILITY_IAM \
             --no-fail-on-empty-changeset \
             --region ${{ vars.AWS_REGION }}

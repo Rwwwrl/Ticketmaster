@@ -36,40 +36,12 @@ jobs:
       lambda_path: src/lambdas/cognito_pre_signup
     secrets: inherit
 
-  fetch-backend-url:
-    needs: [deploy-ticketmaster]
-    runs-on: ubuntu-latest
-    environment: test-eu
-    permissions:
-      contents: read
-      id-token: write
-    outputs:
-      backend_url: ${{ steps.lookup.outputs.url }}
-    steps:
-      - uses: aws-actions/configure-aws-credentials@v6
-        with:
-          role-to-assume: ${{ vars.DEPLOYER_TO_AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-
-      - id: lookup
-        run: |
-          URL=$(aws cloudformation describe-stacks \
-            --stack-name ticketmaster-test-eu \
-            --query "Stacks[0].Outputs[?OutputKey=='ServiceUrl'].OutputValue" \
-            --output text)
-          if [ -z "$URL" ] || [ "$URL" = "None" ]; then
-            echo "::error::Backend stack ticketmaster-test-eu has no ServiceUrl output"
-            exit 1
-          fi
-          echo "url=https://${URL}" >> "$GITHUB_OUTPUT"
-
   deploy-frontend:
-    needs: [fetch-backend-url]
+    needs: [publish-libs]
     uses: ./.github/workflows/called-deploy-container-service.yaml
     with:
       environment: test-eu
       service_name: frontend
       service_path: frontend
       run_migrations: false
-      extra_parameter_overrides: BackendUrl=${{ needs.fetch-backend-url.outputs.backend_url }}
     secrets: inherit
