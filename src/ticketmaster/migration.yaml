@@ -55,6 +55,8 @@ Resources:
               ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_AUDIENCE'
             - Name: LAMBDA_JWT_ISSUER
               ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_ISSUER'
+            - Name: COGNITO_AUDIENCE
+              ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/ticketmaster/${Environment}/COGNITO_AUDIENCE'
 
 Outputs:
   MigrationTaskDefinitionArn:
