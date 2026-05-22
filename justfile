@@ -23,16 +23,6 @@ build-frontend:
     npm run build
 
 
-[group('run')]
-docker-build-frontend:
-    docker build -t frontend:local frontend/
-
-
-[group('run')]
-docker-run-frontend backend_url:
-    docker run --rm -p 8080:80 -e BACKEND_URL={{backend_url}} frontend:local
-
-
 [group('infra')]
 up-infra:
     docker compose -f docker-compose.yaml -p ticketmaster up -d
