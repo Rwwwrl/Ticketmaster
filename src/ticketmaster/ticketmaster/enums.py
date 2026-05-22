@@ -11,3 +11,4 @@ class TicketStatusEnum(StrEnum):
     AVAILABLE = auto()
     RESERVED = auto()
     BOOKED = auto()
+    ANONYMOUS_BOOKED = auto()

@@ -16,6 +16,7 @@ from ticketmaster.http.v1.schemas import request_schemas, response_schemas
 from ticketmaster.repositories import EventRepository, TicketRepository, UserRepository
 from ticketmaster.schemas.dtos import BaseUserDTO
 from ticketmaster.serializers import ToEventResponseSchemaSerializer, ToUserResponseSchemaSerializer
+from ticketmaster.services import UserService
 
 v1_router = APIRouter()
 
@@ -58,6 +59,16 @@ async def get_me(
     user: Annotated[BaseUserDTO, Depends(validate_user_jwt)],
 ) -> response_schemas.UserResponseSchema:
     return ToUserResponseSchemaSerializer.serialize(dto=user)
+
+
+@v1_router.delete("/me/", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_me(
+    user: Annotated[BaseUserDTO, Depends(validate_user_jwt)],
+) -> Response:
+    async with Session() as session, session.begin():
+        await UserService.delete_user(session=session, user=user)
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @v1_router.get(
