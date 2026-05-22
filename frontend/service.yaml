@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Ticketmaster frontend (nginx + React static bundle) on ECS Express Mode
+
+Parameters:
+  ImageTag:
+    Type: String
+    Description: ECR image tag to deploy (git SHA).
+  Environment:
+    Type: String
+    AllowedValues: [test-eu]
+  ExecutionRoleArn:
+    Type: String
+    Description: Task execution role (ECR pull + log writes). Passed from a GitHub Actions variable in CI.
+  InfrastructureRoleArn:
+    Type: String
+    Description: Role ECS uses to manage ALB/TGs/SGs/alarms on our behalf. Passed from a GitHub Actions variable in CI.
+  BackendUrl:
+    Type: String
+    Description: Public URL of the ticketmaster backend (e.g. https://ticketmaster-test-eu.xxxx.amazonaws.com). Provided by CI from the backend stack's outputs.
+
+Resources:
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ecs/frontend-${Environment}'
+      RetentionInDays: 14
+
+  BackendUrlParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub '/ticketmaster/frontend/${Environment}/BACKEND_URL'
+      Type: String
+      Value: !Ref BackendUrl
+      Description: Public URL of the ticketmaster backend, consumed by nginx envsubst at container start.
+
+  Service:
+    Type: AWS::ECS::ExpressGatewayService
+    Properties:
+      ServiceName: !Sub 'frontend-${Environment}'
+      Cluster: default
+      Cpu: '256'
+      Memory: '512'
+      HealthCheckPath: /readiness_check
+      ExecutionRoleArn: !Ref ExecutionRoleArn
+      InfrastructureRoleArn: !Ref InfrastructureRoleArn
+      PrimaryContainer:
+        Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/frontend:${ImageTag}'
+        ContainerPort: 80
+        AwsLogsConfiguration:
+          LogGroup: !Ref LogGroup
+          LogStreamPrefix: frontend
+        Secrets:
+          - Name: BACKEND_URL
+            ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/frontend/${Environment}/BACKEND_URL'
+      ScalingTarget:
+        AutoScalingMetric: AVERAGE_CPU
+        AutoScalingTargetValue: 90
+        MinTaskCount: 1
+        MaxTaskCount: 1
+
+Outputs:
+  ServiceUrl:
+    Description: Public hostname assigned by Express Mode (the URL the browser hits)
+    Value: !GetAtt Service.Endpoint
+  LogGroupName:
+    Value: !Ref LogGroup
