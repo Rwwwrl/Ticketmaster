@@ -1,4 +1,5 @@
 import? 'justfile.local'
+import? 'frontend/justfile'
 
 
 [group('test')]
