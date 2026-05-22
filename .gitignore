@@ -180,3 +180,4 @@ plans/
 .ruff_cache
 obsidian-scripts/
 **/env.dev.yaml
+docs
