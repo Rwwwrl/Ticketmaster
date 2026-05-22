@@ -21,7 +21,7 @@ class UserFactory(factory.Factory):
     uuid = factory.Faker("uuid4", cast_to=None)
     pool_id = "eu-central-1_aB12cDEFg"
     email = factory.Sequence(lambda n: f"user{n}@example.com")
-    external_id = factory.Sequence(lambda n: f"external-sub-{n}")
+    cognito_username = factory.Sequence(lambda n: f"cognito-username-{n}")
 
 
 class TicketFactory(factory.Factory):

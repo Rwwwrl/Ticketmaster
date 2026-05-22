@@ -7,7 +7,7 @@ from uuid import UUID
 
 from libs.common.schemas.dto import DTO
 from libs.datetime_ext.utils import utc_now
-from sqlalchemy import and_, func, or_, tuple_, update
+from sqlalchemy import and_, delete, func, or_, tuple_, update
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -189,6 +189,33 @@ class TicketRepository:
         result = await session.exec(stmt)
         return result.rowcount == 1
 
+    @classmethod
+    async def release_reserved_for_user(cls, session: AsyncSession, user_id: int) -> None:
+        stmt = (
+            update(Ticket)
+            .where(Ticket.user_id == user_id, Ticket.status == TicketStatusEnum.RESERVED)
+            .values(
+                status=TicketStatusEnum.AVAILABLE,
+                user_id=None,
+                reserved_at=None,
+                updated_at=utc_now(),
+            )
+        )
+        await session.exec(stmt)
+
+    @classmethod
+    async def anonymize_booked_for_user(cls, session: AsyncSession, user_id: int) -> None:
+        stmt = (
+            update(Ticket)
+            .where(Ticket.user_id == user_id, Ticket.status == TicketStatusEnum.BOOKED)
+            .values(
+                status=TicketStatusEnum.ANONYMOUS_BOOKED,
+                user_id=None,
+                updated_at=utc_now(),
+            )
+        )
+        await session.exec(stmt)
+
 
 class UserRepository:
     @classmethod
@@ -198,24 +225,30 @@ class UserRepository:
         uuid: UUID,
         pool_id: str,
         email: str,
-        external_id: str,
+        cognito_username: str,
     ) -> BaseUserDTO:
-        user = User(uuid=uuid, pool_id=pool_id, email=email, external_id=external_id)
+        user = User(uuid=uuid, pool_id=pool_id, email=email, cognito_username=cognito_username)
         session.add(user)
         await session.flush()
         await session.refresh(user)
         return BaseUserDTO.from_sqlmodel(model=user)
 
     @classmethod
-    async def get_by_pool_and_external_id(
+    async def get_by_pool_and_cognito_username(
         cls,
         session: AsyncSession,
         pool_id: str,
-        external_id: str,
+        cognito_username: str,
     ) -> BaseUserDTO:
-        user = await session.scalar(select(User).where(User.pool_id == pool_id, User.external_id == external_id))
+        user = await session.scalar(
+            select(User).where(User.pool_id == pool_id, User.cognito_username == cognito_username)
+        )
 
         if user is None:
-            raise UserNotFoundException(f"User not found for pool_id={pool_id} external_id={external_id}")
+            raise UserNotFoundException(f"User not found for pool_id={pool_id} cognito_username={cognito_username}")
 
         return BaseUserDTO.from_sqlmodel(model=user)
+
+    @classmethod
+    async def delete_by_id(cls, session: AsyncSession, user_id: int) -> None:
+        await session.exec(delete(User).where(User.id == user_id))

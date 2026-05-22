@@ -15,7 +15,7 @@ from httpx import Response
 
 _EVENT = {
     "userPoolId": "eu-central-1_aB12cDEFg",
-    "userName": "external-sub-123",
+    "userName": "alice@example.com",
     "request": {"userAttributes": {"email": "alice@example.com"}},
 }
 
@@ -69,7 +69,7 @@ def test_handler_posts_payload_and_signed_jwt_on_success() -> None:
 
     body = json.loads(captured["body"])
     assert body["email"] == "alice@example.com"
-    assert body["external_id"] == "external-sub-123"
+    assert body["cognito_username"] == "alice@example.com"
     assert body["pool_id"] == "eu-central-1_aB12cDEFg"
     assert "uuid" in body
 

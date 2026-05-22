@@ -44,14 +44,14 @@ class User(BaseSqlModel, table=True):
         PrimaryKeyConstraint("id"),
         Index("ix_user_uuid", "uuid", unique=True),
         Index("ix_user_email", "email", unique=True),
-        Index("ix_user_pool_external_id", "pool_id", "external_id", unique=True),
+        Index("ix_user_pool_cognito_username", "pool_id", "cognito_username", unique=True),
     )
 
     id: int | None = Field(default=None, sa_column=Column(Integer, Identity()))
     uuid: UUID
     pool_id: str
     email: str
-    external_id: str
+    cognito_username: str
 
 
 class Ticket(BaseSqlModel, table=True):

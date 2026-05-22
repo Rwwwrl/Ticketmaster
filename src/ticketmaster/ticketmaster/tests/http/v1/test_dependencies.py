@@ -136,6 +136,7 @@ def _sign_cognito_jwt(
     private_key: RSAPrivateKey,
     *,
     sub: str,
+    cognito_username: str,
     pool_id: str = _COGNITO_POOL_ID,
     kid: str = _COGNITO_KID,
     token_use: str = "id",
@@ -146,6 +147,7 @@ def _sign_cognito_jwt(
         payload={
             "iss": _cognito_issuer(pool_id=pool_id),
             "sub": sub,
+            "cognito:username": cognito_username,
             "aud": settings.cognito_audience,
             "iat": now,
             "exp": now + exp_offset,
@@ -169,16 +171,16 @@ async def test_validate_user_jwt_when_valid_token_and_user_exists_returns_dto(
     respx_mock: respx.MockRouter,
 ) -> None:
     private_key = _make_keypair()
-    user = UserFactory.build(pool_id=_COGNITO_POOL_ID, external_id="cognito-sub-1")
+    user = UserFactory.build(pool_id=_COGNITO_POOL_ID, cognito_username="alice@example.com")
     await insert(user)
 
     respx_mock.get(_jwks_url()).mock(return_value=Response(status_code=200, json=_build_jwks(private_key=private_key)))
 
-    token = _sign_cognito_jwt(private_key, sub=user.external_id)
+    token = _sign_cognito_jwt(private_key, sub="cognito-sub-1", cognito_username=user.cognito_username)
 
     dto = await validate_user_jwt(authorization=f"Bearer {token}")
 
-    assert dto.external_id == user.external_id
+    assert dto.cognito_username == user.cognito_username
     assert dto.pool_id == _COGNITO_POOL_ID
 
 
@@ -186,5 +188,33 @@ async def test_validate_user_jwt_when_valid_token_and_user_exists_returns_dto(
 async def test_validate_user_jwt_when_token_invalid_raises_401() -> None:
     with pytest.raises(HTTPException) as excinfo:
         await validate_user_jwt(authorization="Bearer not-a-real-jwt")
+
+    assert excinfo.value.status_code == 401
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_validate_user_jwt_when_cognito_username_claim_missing_raises_401(
+    respx_mock: respx.MockRouter,
+) -> None:
+    private_key = _make_keypair()
+    respx_mock.get(_jwks_url()).mock(return_value=Response(status_code=200, json=_build_jwks(private_key=private_key)))
+
+    now = int(time.time())
+    token = jwt.encode(
+        payload={
+            "iss": _cognito_issuer(),
+            "sub": "cognito-sub-1",
+            "aud": settings.cognito_audience,
+            "iat": now,
+            "exp": now + 60,
+            "token_use": "id",
+        },
+        key=private_key,
+        algorithm="RS256",
+        headers={"kid": _COGNITO_KID},
+    )
+
+    with pytest.raises(HTTPException) as excinfo:
+        await validate_user_jwt(authorization=f"Bearer {token}")
 
     assert excinfo.value.status_code == 401
