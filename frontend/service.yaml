@@ -41,6 +41,12 @@ Resources:
         Secrets:
           - Name: BACKEND_URL
             ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/frontend/${Environment}/BACKEND_URL'
+          - Name: COGNITO_USER_POOL_ID
+            ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/frontend/${Environment}/COGNITO_USER_POOL_ID'
+          - Name: COGNITO_USER_POOL_CLIENT_ID
+            ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/frontend/${Environment}/COGNITO_USER_POOL_CLIENT_ID'
+          - Name: COGNITO_DOMAIN
+            ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/frontend/${Environment}/COGNITO_DOMAIN'
       ScalingTarget:
         AutoScalingMetric: AVERAGE_CPU
         AutoScalingTargetValue: 90
