@@ -10,14 +10,12 @@ export function HomePage() {
     const [email, setEmail] = useState<string>('');
     const [result, setResult] = useState<string>('');
     const [pending, setPending] = useState<boolean>(false);
-    const [authError, setAuthError] = useState<boolean>(false);
+    const [authError] = useState<boolean>(() => {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('auth_error') === '1';
+    });
 
     useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('auth_error') === '1') {
-            setAuthError(true);
-        }
-
         getCurrentUser()
             .then((user) => {
                 setAuthState('signed-in');
