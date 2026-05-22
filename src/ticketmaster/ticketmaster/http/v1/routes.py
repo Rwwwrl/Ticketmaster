@@ -50,6 +50,17 @@ async def create_user_fallback(
 
 
 @v1_router.get(
+    "/me/",
+    status_code=status.HTTP_200_OK,
+    response_model=response_schemas.UserResponseSchema,
+)
+async def get_me(
+    user: Annotated[BaseUserDTO, Depends(validate_user_jwt)],
+) -> response_schemas.UserResponseSchema:
+    return ToUserResponseSchemaSerializer.serialize(dto=user)
+
+
+@v1_router.get(
     "/events/",
     status_code=status.HTTP_200_OK,
     response_model=response_schemas.EventsPageResponseSchema,
