@@ -48,6 +48,7 @@ runs:
         } >> "$GITHUB_OUTPUT"
 
     - name: Run migration task
+      id: run-task
       uses: geekcell/github-action-aws-ecs-run-task@ef36e9172ca49a67bb99ab59130fe5c5e9622257 # v5.0.1
       with:
         cluster: default
@@ -63,3 +64,17 @@ runs:
         # Alembic runs in seconds on a small schema; 180s covers slow expand migrations with backfill.
         # Total budget (start + stop) = 5 min, matching the migration internal deadline.
         task-stop-max-wait-time: 180
+
+    # NOTE @sosov: geekcell's waiter does NOT cancel the task on timeout; per its own docs:
+    # "The task will not be canceled after this time, the pipeline will just be marked as failed."
+    # Without this cleanup, a timed-out migration keeps running and can hold locks indefinitely.
+    - name: Stop orphan task on failure
+      if: failure() && steps.run-task.outputs.task-arn != ''
+      shell: bash
+      env:
+        TASK_ARN: ${{ steps.run-task.outputs.task-arn }}
+      run: |
+        echo "Stopping orphan migration task: $TASK_ARN"
+        aws ecs stop-task --cluster default --task "$TASK_ARN" \
+          --reason "run-ecs-migration: geekcell waiter timed out; cleaning up to release locks" \
+          --query 'task.[lastStatus,desiredStatus]' --output text
