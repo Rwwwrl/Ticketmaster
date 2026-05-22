@@ -81,6 +81,19 @@ jobs:
           stack_name: ${{ inputs.service_name }}-${{ inputs.environment }}-migrate
           command: poetry run alembic upgrade expand@head
 
+      - name: Delete service stack if stuck in ROLLBACK_COMPLETE
+        run: |
+          STACK=${{ inputs.service_name }}-${{ inputs.environment }}
+          STATUS=$(aws cloudformation describe-stacks \
+            --stack-name "$STACK" \
+            --region ${{ vars.AWS_REGION }} \
+            --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo NONE)
+          if [ "$STATUS" = "ROLLBACK_COMPLETE" ]; then
+            echo "Stack $STACK is in ROLLBACK_COMPLETE (failed initial create) — deleting before redeploy"
+            aws cloudformation delete-stack --stack-name "$STACK" --region ${{ vars.AWS_REGION }}
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK" --region ${{ vars.AWS_REGION }}
+          fi
+
       - name: Deploy CloudFormation stack
         run: |
           aws cloudformation deploy \

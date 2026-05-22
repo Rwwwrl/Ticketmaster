@@ -118,6 +118,11 @@ class TicketRepository:
         return BaseTicketDTO.from_sqlmodel(model=result.one())
 
     @classmethod
+    async def get_all_by_event_id(cls, session: AsyncSession, event_id: int) -> list[BaseTicketDTO]:
+        result = await session.exec(select(Ticket).where(Ticket.event_id == event_id).order_by(Ticket.id))
+        return [BaseTicketDTO.from_sqlmodel(model=ticket) for ticket in result.all()]
+
+    @classmethod
     async def reserve(
         cls,
         session: AsyncSession,
