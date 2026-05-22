@@ -18,7 +18,7 @@ def _dto() -> BaseUserDTO:
         uuid=uuid4(),
         pool_id="eu-central-1_aB12cDEFg",
         email="alice@example.com",
-        external_id="external-sub-1",
+        cognito_username="alice@example.com",
         created_at=datetime(2026, 5, 22, tzinfo=timezone.utc),
         updated_at=datetime(2026, 5, 22, tzinfo=timezone.utc),
     )
@@ -54,7 +54,7 @@ async def test_get_me_when_signed_in_returns_200(
     assert body["uuid"] == str(signed_in_user.uuid)
     assert body["email"] == signed_in_user.email
     assert body["pool_id"] == signed_in_user.pool_id
-    assert body["external_id"] == signed_in_user.external_id
+    assert body["cognito_username"] == signed_in_user.cognito_username
 
 
 @pytest.mark.asyncio(loop_scope="session")

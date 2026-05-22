@@ -225,25 +225,27 @@ class UserRepository:
         uuid: UUID,
         pool_id: str,
         email: str,
-        external_id: str,
+        cognito_username: str,
     ) -> BaseUserDTO:
-        user = User(uuid=uuid, pool_id=pool_id, email=email, external_id=external_id)
+        user = User(uuid=uuid, pool_id=pool_id, email=email, cognito_username=cognito_username)
         session.add(user)
         await session.flush()
         await session.refresh(user)
         return BaseUserDTO.from_sqlmodel(model=user)
 
     @classmethod
-    async def get_by_pool_and_external_id(
+    async def get_by_pool_and_cognito_username(
         cls,
         session: AsyncSession,
         pool_id: str,
-        external_id: str,
+        cognito_username: str,
     ) -> BaseUserDTO:
-        user = await session.scalar(select(User).where(User.pool_id == pool_id, User.external_id == external_id))
+        user = await session.scalar(
+            select(User).where(User.pool_id == pool_id, User.cognito_username == cognito_username)
+        )
 
         if user is None:
-            raise UserNotFoundException(f"User not found for pool_id={pool_id} external_id={external_id}")
+            raise UserNotFoundException(f"User not found for pool_id={pool_id} cognito_username={cognito_username}")
 
         return BaseUserDTO.from_sqlmodel(model=user)
 

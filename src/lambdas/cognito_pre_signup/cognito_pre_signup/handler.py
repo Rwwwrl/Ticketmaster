@@ -76,7 +76,7 @@ def lambda_handler(event: dict, context) -> dict:
     payload = {
         "uuid": str(uuid.uuid4()),
         "email": event["request"]["userAttributes"]["email"],
-        "external_id": event["userName"],
+        "cognito_username": event["userName"],
         "pool_id": event["userPoolId"],
     }
     _post_to_backend(payload=payload)

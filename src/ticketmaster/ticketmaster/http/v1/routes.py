@@ -39,12 +39,12 @@ async def create_user_fallback(
                 uuid=payload.uuid,
                 pool_id=payload.pool_id,
                 email=payload.email,
-                external_id=payload.external_id,
+                cognito_username=payload.cognito_username,
             )
     except IntegrityError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email or pool_id+external_id already exists",
+            detail="User with this email or pool_id+cognito_username already exists",
         )
 
     return ToUserResponseSchemaSerializer.serialize(dto=dto)

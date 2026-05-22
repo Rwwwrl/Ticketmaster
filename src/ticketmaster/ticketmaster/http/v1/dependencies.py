@@ -219,12 +219,16 @@ async def validate_user_jwt(authorization: str = Header(...)) -> BaseUserDTO:
     if claims.get("token_use") != "id":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
+    cognito_username = claims.get("cognito:username")
+    if not isinstance(cognito_username, str) or not cognito_username:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
     async with Session() as session, session.begin():
         try:
-            return await UserRepository.get_by_pool_and_external_id(
+            return await UserRepository.get_by_pool_and_cognito_username(
                 session=session,
                 pool_id=pool_id,
-                external_id=claims["sub"],
+                cognito_username=cognito_username,
             )
         except UserNotFoundException:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)

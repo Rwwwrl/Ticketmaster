@@ -86,7 +86,7 @@ async def test_delete_me_when_no_tickets_returns_204_and_deletes_user(
     assert response.status_code == 204
     mock_cognito.admin_delete_user.assert_awaited_once_with(
         UserPoolId=signed_in_user_in_db.pool_id,
-        Username=signed_in_user_in_db.external_id,
+        Username=signed_in_user_in_db.cognito_username,
     )
 
     async with Session() as session, session.begin():

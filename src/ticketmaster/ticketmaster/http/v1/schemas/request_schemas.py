@@ -7,5 +7,5 @@ from pydantic import EmailStr
 class CreateUserFallbackRequestSchema(BaseRequestSchema):
     uuid: UUID
     email: EmailStr
-    external_id: str
+    cognito_username: str
     pool_id: str

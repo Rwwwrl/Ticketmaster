@@ -24,6 +24,6 @@ class UserResponseSchema(BaseResponseSchema):
     uuid: UUID
     pool_id: str
     email: str
-    external_id: str
+    cognito_username: str
     created_at: datetime
     updated_at: datetime

@@ -14,6 +14,6 @@ class UserService:
 
         async with aws_session.client(service_name="cognito-idp") as cognito:
             try:
-                await cognito.admin_delete_user(UserPoolId=user.pool_id, Username=user.external_id)
+                await cognito.admin_delete_user(UserPoolId=user.pool_id, Username=user.cognito_username)
             except cognito.exceptions.UserNotFoundException:
                 pass

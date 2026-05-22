@@ -22,7 +22,7 @@ def _payload() -> dict[str, Any]:
     return {
         "uuid": str(uuid4()),
         "email": "alice@example.com",
-        "external_id": "external-sub-1",
+        "cognito_username": "alice@example.com",
         "pool_id": "eu-central-1_aB12cDEFg",
     }
 
@@ -39,7 +39,7 @@ async def test_create_user_fallback_when_valid_payload_returns_201(
     body = response.json()
     assert body["uuid"] == payload["uuid"]
     assert body["email"] == payload["email"]
-    assert body["external_id"] == payload["external_id"]
+    assert body["cognito_username"] == payload["cognito_username"]
     assert body["pool_id"] == payload["pool_id"]
 
 
@@ -60,7 +60,7 @@ async def test_create_user_fallback_when_duplicate_email_returns_400(
     first = await async_client.post(url="/v1/users/", json=payload)
     assert first.status_code == 201
 
-    second_payload = {**payload, "uuid": str(uuid4()), "external_id": "external-sub-2"}
+    second_payload = {**payload, "uuid": str(uuid4()), "cognito_username": "bob@example.com"}
     second = await async_client.post(url="/v1/users/", json=second_payload)
 
     assert second.status_code == 400
@@ -68,7 +68,7 @@ async def test_create_user_fallback_when_duplicate_email_returns_400(
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_create_user_fallback_when_duplicate_pool_external_id_returns_400(
+async def test_create_user_fallback_when_duplicate_pool_cognito_username_returns_400(
     async_client: AsyncClient, bypass_lambda_jwt: None
 ) -> None:
     payload = _payload()
