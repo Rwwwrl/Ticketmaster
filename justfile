@@ -1,5 +1,4 @@
 import? 'justfile.local'
-import? 'frontend/justfile'
 
 
 [group('test')]
@@ -10,6 +9,28 @@ test:
 [group('run')]
 run-ticketmaster-http:
     poetry -C src/ticketmaster run fastapi dev src/ticketmaster/ticketmaster/http/main.py --no-reload --port 8080
+
+
+[group('run')]
+[working-directory('frontend')]
+run-frontend-dev:
+    npm run dev
+
+
+[group('run')]
+[working-directory('frontend')]
+build-frontend:
+    npm run build
+
+
+[group('run')]
+docker-build-frontend:
+    docker build -t frontend:local frontend/
+
+
+[group('run')]
+docker-run-frontend backend_url:
+    docker run --rm -p 8080:80 -e BACKEND_URL={{backend_url}} frontend:local
 
 
 [group('infra')]
