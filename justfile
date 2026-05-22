@@ -11,6 +11,18 @@ run-ticketmaster-http:
     poetry -C src/ticketmaster run fastapi dev src/ticketmaster/ticketmaster/http/main.py --no-reload --port 8080
 
 
+[group('run')]
+[working-directory('frontend')]
+run-frontend-dev:
+    npm run dev
+
+
+[group('run')]
+[working-directory('frontend')]
+build-frontend:
+    npm run build
+
+
 [group('infra')]
 up-infra:
     docker compose -f docker-compose.yaml -p ticketmaster up -d
@@ -29,7 +41,7 @@ aws-down env="test-eu" profile="tm-test":
     #!/usr/bin/env bash
     set -euo pipefail
     export AWS_PROFILE={{profile}}
-    for stack in "ticketmaster-cognito-pre-signup-{{env}}" "ticketmaster-{{env}}" "ticketmaster-{{env}}-migrate"; do
+    for stack in "ticketmaster-cognito-pre-signup-{{env}}" "frontend-{{env}}" "ticketmaster-{{env}}" "ticketmaster-{{env}}-migrate"; do
         echo "Deleting CloudFormation stack '$stack'..."
         aws cloudformation delete-stack --stack-name "$stack"
         aws cloudformation wait stack-delete-complete --stack-name "$stack"
