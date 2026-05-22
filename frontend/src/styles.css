@@ -7,8 +7,13 @@ body {
 }
 
 main {
-    max-width: 640px;
+    max-width: 720px;
     margin: 0 auto;
+}
+
+h1 {
+    font-size: 1.5rem;
+    margin-top: 1.5rem;
 }
 
 button {
@@ -30,4 +35,97 @@ pre {
     background: #fff;
     border: 1px solid #ddd;
     font-size: 0.9rem;
+}
+
+.tabbar {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 1.5rem;
+}
+
+.tab {
+    padding: 0.75rem 1rem;
+    text-decoration: none;
+    color: #555;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+}
+
+.tab.active {
+    color: #111;
+    border-bottom-color: #111;
+    font-weight: 600;
+}
+
+.event-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.event-list li {
+    border-bottom: 1px solid #eee;
+}
+
+.event-list a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    color: #111;
+    text-decoration: none;
+}
+
+.event-list a:hover {
+    background: #f0f0f0;
+}
+
+.event-meta {
+    color: #555;
+    font-size: 0.9rem;
+}
+
+table.tickets {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 1rem;
+}
+
+table.tickets th,
+table.tickets td {
+    border: 1px solid #ddd;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    vertical-align: top;
+}
+
+table.tickets th {
+    background: #f3f3f3;
+}
+
+.profile-details {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.25rem 1rem;
+    margin: 1rem 0;
+}
+
+.profile-details dt {
+    color: #555;
+}
+
+.profile-details dd {
+    margin: 0;
+    word-break: break-all;
+}
+
+.error {
+    color: #b00020;
+    margin: 0.5rem 0;
+}
+
+.hint {
+    color: #555;
+    font-style: italic;
 }

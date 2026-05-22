@@ -14,3 +14,19 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
         },
     });
 }
+
+export async function publicApiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+    return fetch(path, init);
+}
+
+export async function parseDetail(response: Response): Promise<string> {
+    try {
+        const body = await response.json();
+        if (typeof body?.detail === 'string') {
+            return body.detail;
+        }
+        return `${response.status} ${response.statusText}`;
+    } catch {
+        return `${response.status} ${response.statusText}`;
+    }
+}
