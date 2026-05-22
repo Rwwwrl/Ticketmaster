@@ -1,0 +1,7 @@
+window.__APP_CONFIG__ = {
+    cognito: {
+        userPoolId: '${COGNITO_USER_POOL_ID}',
+        userPoolClientId: '${COGNITO_USER_POOL_CLIENT_ID}',
+        domain: '${COGNITO_DOMAIN}'
+    }
+};
