@@ -3,7 +3,7 @@ from uuid import UUID
 
 from libs.fastapi_ext.schemas.base_schemas import BaseResponseSchema
 
-from ticketmaster.enums import EventTypeEnum
+from ticketmaster.enums import EventTypeEnum, TicketStatusEnum
 
 
 class EventResponseSchema(BaseResponseSchema):
@@ -18,6 +18,14 @@ class EventsPageResponseSchema(BaseResponseSchema):
     items: list[EventResponseSchema]
     page_size: int
     next_cursor: str | None
+
+
+class TicketResponseSchema(BaseResponseSchema):
+    id: int
+    event_id: int
+    status: TicketStatusEnum
+    reserved_at: datetime | None
+    booked_at: datetime | None
 
 
 class UserResponseSchema(BaseResponseSchema):

@@ -15,7 +15,11 @@ from ticketmaster.http.v1.dependencies import (
 from ticketmaster.http.v1.schemas import request_schemas, response_schemas
 from ticketmaster.repositories import EventRepository, TicketRepository, UserRepository
 from ticketmaster.schemas.dtos import BaseUserDTO
-from ticketmaster.serializers import ToEventResponseSchemaSerializer, ToUserResponseSchemaSerializer
+from ticketmaster.serializers import (
+    ToEventResponseSchemaSerializer,
+    ToTicketResponseSchemaSerializer,
+    ToUserResponseSchemaSerializer,
+)
 from ticketmaster.services import UserService
 
 v1_router = APIRouter()
@@ -120,6 +124,18 @@ async def search_events(
         page_size=page_size,
         next_cursor=next_cursor_pair.encode() if next_cursor_pair is not None else None,
     )
+
+
+@v1_router.get(
+    "/events/{event_id}/tickets/",
+    status_code=status.HTTP_200_OK,
+    response_model=list[response_schemas.TicketResponseSchema],
+)
+async def list_event_tickets(event_id: int) -> list[response_schemas.TicketResponseSchema]:
+    async with Session() as session, session.begin():
+        items = await TicketRepository.get_all_by_event_id(session=session, event_id=event_id)
+
+    return [ToTicketResponseSchemaSerializer.serialize(dto=dto) for dto in items]
 
 
 @v1_router.post(
