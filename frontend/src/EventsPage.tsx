@@ -90,6 +90,9 @@ export function EventsPage() {
 
     const handleSearch: FormEventHandler<HTMLFormElement> = (event) => {
         event.preventDefault();
+        if (pending) {
+            return;
+        }
         const trimmed = query.trim();
         setActiveQuery(trimmed);
         setNextCursor(null);
