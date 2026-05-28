@@ -6,6 +6,7 @@ from libs.common.schemas.dto import DTO
 
 from ticketmaster.enums import EventTypeEnum, TicketStatusEnum
 from ticketmaster.models import Event, Ticket, User
+from ticketmaster.redis_cache.cache_documents import EventCacheDocument
 
 
 class BaseEventDTO(DTO):
@@ -18,6 +19,10 @@ class BaseEventDTO(DTO):
     @classmethod
     def from_sqlmodel(cls, model: Event) -> Self:
         return cls(**model.model_dump())
+
+    @classmethod
+    def from_cache_document(cls, document: EventCacheDocument) -> Self:
+        return cls(**document.model_dump())
 
 
 class BaseTicketDTO(DTO):

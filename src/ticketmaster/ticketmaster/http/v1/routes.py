@@ -20,7 +20,7 @@ from ticketmaster.serializers import (
     ToTicketResponseSchemaSerializer,
     ToUserResponseSchemaSerializer,
 )
-from ticketmaster.services import UserService
+from ticketmaster.services import EventService, UserService
 
 v1_router = APIRouter()
 
@@ -85,12 +85,7 @@ async def list_events_page(
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> response_schemas.EventsPageResponseSchema:
     decoded_cursor = decode_event_cursor(cursor=cursor)
-    async with Session() as session, session.begin():
-        items, next_cursor_pair = await EventRepository.list_after_cursor(
-            session=session,
-            cursor=decoded_cursor,
-            page_size=page_size,
-        )
+    items, next_cursor_pair = await EventService.list_events_page(cursor=decoded_cursor, page_size=page_size)
 
     return response_schemas.EventsPageResponseSchema(
         items=[ToEventResponseSchemaSerializer.serialize(dto=dto) for dto in items],

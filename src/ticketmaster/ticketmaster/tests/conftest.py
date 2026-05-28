@@ -5,6 +5,7 @@ import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from libs.sqlmodel_ext import BaseSqlModel
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine
 from ticketmaster.http.v1.routes import v1_router
 from ticketmaster.models import Event, Ticket, User
@@ -23,9 +24,10 @@ def autocleared_sqlmodel_tables() -> list[type[BaseSqlModel]]:
 
 
 @pytest_asyncio.fixture(scope="session")
-async def fastapi_app(sqlmodel_engine: AsyncEngine) -> AsyncGenerator[FastAPI]:
+async def fastapi_app(sqlmodel_engine: AsyncEngine, redis: Redis) -> AsyncGenerator[FastAPI]:
     app = FastAPI()
     app.state.sqlmodel_engine = sqlmodel_engine
+    app.state.redis = redis
     app.include_router(router=v1_router, prefix="/v1")
     yield app
 

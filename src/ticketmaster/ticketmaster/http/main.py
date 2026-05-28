@@ -14,10 +14,13 @@ from libs.fastapi_ext.middlewares import (
 )
 from libs.logging import setup_logging
 from libs.logging.enums import ProcessTypeEnum
+from libs.redis_ext import redis_proxy
+from libs.redis_ext.utils import health_check as redis_health_check
 from libs.sentry_ext import setup_sentry
 from libs.settings import is_data_sensitive_env
 from libs.sqlmodel_ext import Session
 from libs.sqlmodel_ext.utils import health_check as postgres_health_check
+from redis.asyncio import Redis
 
 from ticketmaster.http.v1.routes import v1_router
 from ticketmaster.settings import settings
@@ -38,6 +41,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Session.configure(bind=engine)
     app.state.sqlmodel_engine = engine
 
+    redis_proxy.configure_with_client(client=Redis.from_url(url=settings.redis_url, decode_responses=False))
+    app.state.redis = redis_proxy.redis
+
     if settings.aws_task_role is not None:
         bind_task_role_to_aws_session(
             region=settings.aws_task_role.region,
@@ -48,6 +54,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     yield
 
+    await redis_proxy.redis.aclose()
     await engine.dispose()
 
 
@@ -78,6 +85,7 @@ async def health() -> dict[str, str]:
 @app.get("/readiness_check")
 async def readiness_check() -> dict[str, str]:
     await postgres_health_check()
+    await redis_health_check()
     return {"status": "ok"}
 
 
