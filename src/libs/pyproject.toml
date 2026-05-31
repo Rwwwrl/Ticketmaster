@@ -20,7 +20,7 @@ fastapi = "^0.136.0"
 sentry-sdk = "^2.58.0"
 httpx = "^0.28.1"
 aioboto3 = "^15.5.0"
-redis = "^7.0"
+redis = "^8.0.0"
 
 [build-system]
 requires = ["poetry-core"]
