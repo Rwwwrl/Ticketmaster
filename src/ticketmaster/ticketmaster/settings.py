@@ -3,6 +3,7 @@ from typing import ClassVar
 
 from libs.common.schemas.dto import DTO
 from libs.logging.settings import LoggingSettingsMixin
+from libs.redis_ext.settings import RedisSettingsMixin
 from libs.sentry_ext import SentrySettingsMixin
 from libs.settings import BaseAppSettings
 from libs.sqlmodel_ext.settings import PostgresSettingsMixin
@@ -18,7 +19,7 @@ class AWSTaskRoleSettings(DTO):
     session_token: str | None = None
 
 
-class Settings(SentrySettingsMixin, LoggingSettingsMixin, PostgresSettingsMixin, BaseAppSettings):
+class Settings(SentrySettingsMixin, LoggingSettingsMixin, PostgresSettingsMixin, RedisSettingsMixin, BaseAppSettings):
     model_config = SettingsConfigDict(extra="ignore", env_nested_delimiter="__")
     env_dev_yaml: ClassVar[Path] = BASE_DIR / "env.dev.yaml"
 

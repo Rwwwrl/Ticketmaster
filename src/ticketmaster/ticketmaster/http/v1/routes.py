@@ -6,6 +6,7 @@ from libs.datetime_ext.utils import utc_now
 from libs.sqlmodel_ext import Session
 from sqlalchemy.exc import IntegrityError
 
+from ticketmaster.exceptions import EventNotFoundException
 from ticketmaster.http.v1.dependencies import (
     decode_event_cursor,
     decode_event_search_cursor,
@@ -20,7 +21,7 @@ from ticketmaster.serializers import (
     ToTicketResponseSchemaSerializer,
     ToUserResponseSchemaSerializer,
 )
-from ticketmaster.services import UserService
+from ticketmaster.services import EventService, UserService
 
 v1_router = APIRouter()
 
@@ -85,8 +86,9 @@ async def list_events_page(
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> response_schemas.EventsPageResponseSchema:
     decoded_cursor = decode_event_cursor(cursor=cursor)
+
     async with Session() as session, session.begin():
-        items, next_cursor_pair = await EventRepository.list_after_cursor(
+        items, next_cursor_pair = await EventService.list_events_page(
             session=session,
             cursor=decoded_cursor,
             page_size=page_size,
@@ -124,6 +126,21 @@ async def search_events(
         page_size=page_size,
         next_cursor=next_cursor_pair.encode() if next_cursor_pair is not None else None,
     )
+
+
+@v1_router.get(
+    "/events/{event_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=response_schemas.EventResponseSchema,
+)
+async def get_event_by_id(event_id: int) -> response_schemas.EventResponseSchema:
+    try:
+        async with Session() as session, session.begin():
+            event = await EventService.get_event_by_id(session=session, _id=event_id)
+    except EventNotFoundException:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+
+    return ToEventResponseSchemaSerializer.serialize(dto=event)
 
 
 @v1_router.get(

@@ -13,9 +13,20 @@ interface Ticket {
     booked_at: string | null;
 }
 
+interface EventDetail {
+    id: number;
+    name: string;
+    description: string;
+    type: string;
+    start_at: string;
+}
+
 export function EventDetailsPage() {
     const { eventId } = useParams<{ eventId: string }>();
     const { authState } = useAuth();
+    const [event, setEvent] = useState<EventDetail | null>(null);
+    const [eventPending, setEventPending] = useState<boolean>(true);
+    const [eventError, setEventError] = useState<string>('');
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [pending, setPending] = useState<boolean>(true);
     const [loadError, setLoadError] = useState<string>('');
@@ -68,6 +79,37 @@ export function EventDetailsPage() {
         };
     }, [eventId]);
 
+    useEffect(() => {
+        let cancelled = false;
+        const run = async () => {
+            setEventPending(true);
+            setEventError('');
+            try {
+                const response = await publicApiFetch(`/api/v1/events/${eventId}`);
+                if (cancelled) {
+                    return;
+                }
+                if (!response.ok) {
+                    setEventError(await parseDetail(response));
+                    return;
+                }
+                setEvent((await response.json()) as EventDetail);
+            } catch (err) {
+                if (!cancelled) {
+                    setEventError(err instanceof Error ? err.message : 'unknown error');
+                }
+            } finally {
+                if (!cancelled) {
+                    setEventPending(false);
+                }
+            }
+        };
+        void run();
+        return () => {
+            cancelled = true;
+        };
+    }, [eventId]);
+
     const handleAction = async (ticketId: number, action: 'reserve' | 'book') => {
         setActionError((prev) => ({ ...prev, [ticketId]: '' }));
         setActionPending((prev) => ({ ...prev, [ticketId]: true }));
@@ -98,7 +140,17 @@ export function EventDetailsPage() {
             <p>
                 <Link to="/events">← Back to events</Link>
             </p>
-            <h1>Event #{eventId}</h1>
+            {eventPending && !event && <h1>Loading…</h1>}
+            {eventError && <p className="error">{eventError}</p>}
+            {event && (
+                <>
+                    <h1>{event.name}</h1>
+                    <p className="event-meta">
+                        {event.type} · {new Date(event.start_at).toLocaleString()}
+                    </p>
+                    <p>{event.description}</p>
+                </>
+            )}
             {!isSignedIn && <p className="hint">Sign in to reserve or book tickets.</p>}
             {loadError && <p className="error">{loadError}</p>}
             {pending && tickets.length === 0 && <p>Loading…</p>}

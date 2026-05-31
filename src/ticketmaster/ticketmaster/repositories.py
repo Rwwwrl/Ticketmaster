@@ -12,7 +12,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ticketmaster.enums import TicketStatusEnum
-from ticketmaster.exceptions import UserNotFoundException
+from ticketmaster.exceptions import EventNotFoundException, UserNotFoundException
 from ticketmaster.models import Event, Ticket, User
 from ticketmaster.schemas.dtos import BaseEventDTO, BaseTicketDTO, BaseUserDTO
 
@@ -55,24 +55,47 @@ class EventSearchCursorDTO(DTO):
 
 class EventRepository:
     @classmethod
-    async def list_after_cursor(
+    async def get_by_id(cls, session: AsyncSession, _id: int) -> BaseEventDTO:
+        result = await session.exec(select(Event).where(Event.id == _id))
+        event = result.first()
+
+        if event is None:
+            raise EventNotFoundException(f"Event not found for id={_id}")
+
+        return BaseEventDTO.from_sqlmodel(model=event)
+
+    @classmethod
+    async def list_ids_sorted_by_start_at(
         cls,
         session: AsyncSession,
         cursor: EventCursorDTO | None,
         page_size: int,
-    ) -> tuple[list[BaseEventDTO], EventCursorDTO | None]:
-        statement = select(Event).order_by(Event.start_at, Event.id).limit(page_size + 1)
+    ) -> tuple[list[int], EventCursorDTO | None]:
+        statement = select(Event.id, Event.start_at).order_by(Event.start_at, Event.id).limit(page_size + 1)
         if cursor is not None:
             statement = statement.where(tuple_(Event.start_at, Event.id) > tuple_(cursor.started_at, cursor.id))
 
-        items_result = await session.exec(statement)
-        rows = items_result.all()
+        rows = (await session.exec(statement)).all()
         has_next_page = len(rows) > page_size
         kept_rows = rows[:page_size]
-        items = [BaseEventDTO.from_sqlmodel(model=event) for event in kept_rows]
-        next_cursor = EventCursorDTO(started_at=items[-1].start_at, id=items[-1].id) if has_next_page else None
 
-        return items, next_cursor
+        ids = [event_id for event_id, _start_at in kept_rows]
+
+        if has_next_page:
+            last_event_id, last_start_at = kept_rows[-1]
+            next_cursor = EventCursorDTO(started_at=last_start_at, id=last_event_id)
+        else:
+            next_cursor = None
+
+        return ids, next_cursor
+
+    @classmethod
+    async def get_many_by_ids(cls, session: AsyncSession, ids: list[int]) -> list[BaseEventDTO]:
+        if not ids:
+            return []
+
+        rows = (await session.exec(select(Event).where(Event.id.in_(ids)))).all()
+        return [BaseEventDTO.from_sqlmodel(model=event) for event in rows]
 
     @classmethod
     async def search_after_cursor(
