@@ -6,6 +6,7 @@ from libs.datetime_ext.utils import utc_now
 from libs.sqlmodel_ext import Session
 from sqlalchemy.exc import IntegrityError
 
+from ticketmaster.exceptions import EventNotFoundException
 from ticketmaster.http.v1.dependencies import (
     decode_event_cursor,
     decode_event_search_cursor,
@@ -119,6 +120,21 @@ async def search_events(
         page_size=page_size,
         next_cursor=next_cursor_pair.encode() if next_cursor_pair is not None else None,
     )
+
+
+@v1_router.get(
+    "/events/{event_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=response_schemas.EventResponseSchema,
+)
+async def get_event_by_id(event_id: int) -> response_schemas.EventResponseSchema:
+    try:
+        async with Session() as session, session.begin():
+            event = await EventRepository.get_by_id(session=session, _id=event_id)
+    except EventNotFoundException:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+
+    return ToEventResponseSchemaSerializer.serialize(dto=event)
 
 
 @v1_router.get(

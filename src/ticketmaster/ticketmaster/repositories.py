@@ -12,7 +12,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ticketmaster.enums import TicketStatusEnum
-from ticketmaster.exceptions import UserNotFoundException
+from ticketmaster.exceptions import EventNotFoundException, UserNotFoundException
 from ticketmaster.models import Event, Ticket, User
 from ticketmaster.schemas.dtos import BaseEventDTO, BaseTicketDTO, BaseUserDTO
 
@@ -54,6 +54,16 @@ class EventSearchCursorDTO(DTO):
 
 
 class EventRepository:
+    @classmethod
+    async def get_by_id(cls, session: AsyncSession, _id: int) -> BaseEventDTO:
+        result = await session.exec(select(Event).where(Event.id == _id))
+        event = result.first()
+
+        if event is None:
+            raise EventNotFoundException(f"Event not found for id={_id}")
+
+        return BaseEventDTO.from_sqlmodel(model=event)
+
     @classmethod
     async def list_ids_sorted_by_start_at(
         cls,
