@@ -1,9 +1,5 @@
 # Ticketmaster
 
-## Codex Setup
-
-Project plans live in `./plans`.
-
 Ticketmaster is an online platform where anyone can browse and book tickets to live events — sport games, concerts, and theater shows.
 
 ## Deployment
