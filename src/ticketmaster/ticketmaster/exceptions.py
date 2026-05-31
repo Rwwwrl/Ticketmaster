@@ -1,9 +1,14 @@
+from libs.redis_ext import CacheDocumentNotFoundException
 from libs.sqlmodel_ext import NotFoundException
 
 
 class EventNotFoundException(NotFoundException):
-    """Raised when an event lookup returns no row."""
+    pass
 
 
 class UserNotFoundException(NotFoundException):
-    """Raised when a user lookup returns no row."""
+    pass
+
+
+class EventCacheDocumentNotFoundException(CacheDocumentNotFoundException):
+    pass

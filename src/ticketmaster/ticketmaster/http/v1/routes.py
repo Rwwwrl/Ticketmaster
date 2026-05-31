@@ -86,7 +86,13 @@ async def list_events_page(
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> response_schemas.EventsPageResponseSchema:
     decoded_cursor = decode_event_cursor(cursor=cursor)
-    items, next_cursor_pair = await EventService.list_events_page(cursor=decoded_cursor, page_size=page_size)
+
+    async with Session() as session, session.begin():
+        items, next_cursor_pair = await EventService.list_events_page(
+            session=session,
+            cursor=decoded_cursor,
+            page_size=page_size,
+        )
 
     return response_schemas.EventsPageResponseSchema(
         items=[ToEventResponseSchemaSerializer.serialize(dto=dto) for dto in items],
@@ -130,7 +136,7 @@ async def search_events(
 async def get_event_by_id(event_id: int) -> response_schemas.EventResponseSchema:
     try:
         async with Session() as session, session.begin():
-            event = await EventRepository.get_by_id(session=session, _id=event_id)
+            event = await EventService.get_event_by_id(session=session, _id=event_id)
     except EventNotFoundException:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 

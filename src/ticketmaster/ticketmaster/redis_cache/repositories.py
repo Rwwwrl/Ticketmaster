@@ -1,19 +1,34 @@
-import logging
-
 from redis.asyncio import Redis
 
+from ticketmaster.exceptions import EventCacheDocumentNotFoundException
 from ticketmaster.redis_cache.cache_documents import EventCacheDocument
 from ticketmaster.schemas.dtos import BaseEventDTO
 
 _EVENT_TTL_SECONDS = 300
-
-_logger = logging.getLogger(__name__)
 
 
 class EventCacheRepository:
     @classmethod
     def _event_key(cls, event_id: int) -> str:
         return f"event:{event_id}"
+
+    @classmethod
+    async def get_by_id(cls, redis: Redis, _id: int) -> BaseEventDTO:
+        raw = await redis.get(name=cls._event_key(event_id=_id))
+        if raw is None:
+            raise EventCacheDocumentNotFoundException(f"Event cache document not found for id={_id}")
+
+        cache_document = EventCacheDocument.model_validate_json(raw)
+        return BaseEventDTO.from_cache_document(document=cache_document)
+
+    @classmethod
+    async def set(cls, redis: Redis, dto: BaseEventDTO, ttl_seconds: int = _EVENT_TTL_SECONDS) -> None:
+        cache_document = EventCacheDocument.from_dto(dto=dto)
+        await redis.set(
+            name=cls._event_key(event_id=cache_document.id),
+            value=cache_document.model_dump_json(),
+            ex=ttl_seconds,
+        )
 
     @classmethod
     async def get_many_by_ids(cls, redis: Redis, ids: list[int]) -> list[BaseEventDTO]:
