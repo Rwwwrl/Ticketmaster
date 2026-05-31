@@ -27,7 +27,7 @@ addopts = "--import-mode=importlib -p libs.tests_ext.sqlmodel_fixtures -p libs.t
 env = [
     "ENVIRONMENT=cicd",
     "POSTGRES_DB_URL=postgresql+asyncpg://postgres:postgres@localhost:15432/postgres",
-    "REDIS_URL=redis://localhost:6379/15",
+    "REDIS_URL=redis://localhost:16379/15",
     "AWS_REGION=eu-central-1",
     "LAMBDA_JWT_KMS_KEY_ARN=arn:aws:kms:eu-central-1:000000000000:key/test-placeholder",
     "LAMBDA_JWT_AUDIENCE=ticketmaster-backend",
