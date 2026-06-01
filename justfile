@@ -7,13 +7,13 @@ test:
 
 
 [group('run')]
-run-ticketmaster-http:
+runserver:
     poetry -C src/ticketmaster run fastapi dev src/ticketmaster/ticketmaster/http/main.py --no-reload --port 8080
 
 
 [group('run')]
 [working-directory('frontend')]
-run-frontend-dev:
+runui:
     npm run dev
 
 
