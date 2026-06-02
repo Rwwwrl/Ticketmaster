@@ -39,7 +39,9 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: kms:GetPublicKey
-                Resource: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_KMS_KEY_ARN}}'
+                Resource:
+                  - !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_KMS_KEY_ARN}}'
+                  - !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/ADMIN_JWT_KMS_KEY_ARN}}'
         - PolicyName: cognito-admin-delete-user
           PolicyDocument:
             Version: '2012-10-17'
@@ -78,12 +80,16 @@ Resources:
             ValueFrom: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:ticketmaster/ticketmaster/${Environment}/REDIS_URL'
           - Name: SENTRY_DSN
             ValueFrom: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:ticketmaster/ticketmaster/${Environment}/SENTRY_DSN'
+          - Name: JWT_AUDIENCE
+            ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/ticketmaster/${Environment}/JWT_AUDIENCE'
           - Name: LAMBDA_JWT_KMS_KEY_ARN
             ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_KMS_KEY_ARN'
-          - Name: LAMBDA_JWT_AUDIENCE
-            ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_AUDIENCE'
           - Name: LAMBDA_JWT_ISSUER
             ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_ISSUER'
+          - Name: ADMIN_JWT_KMS_KEY_ARN
+            ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/ticketmaster/${Environment}/ADMIN_JWT_KMS_KEY_ARN'
+          - Name: ADMIN_JWT_ISSUER
+            ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/ticketmaster/${Environment}/ADMIN_JWT_ISSUER'
           - Name: COGNITO_AUDIENCE
             ValueFrom: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/ticketmaster/ticketmaster/${Environment}/COGNITO_AUDIENCE'
       ScalingTarget:

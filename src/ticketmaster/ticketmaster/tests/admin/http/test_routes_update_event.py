@@ -16,7 +16,7 @@ from ticketmaster.tests.factories import EventFactory
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_update_event_when_single_field_returns_200_and_only_changes_that_field(
-    async_client: AsyncClient,
+    async_client: AsyncClient, bypass_admin_jwt: None
 ) -> None:
     event = EventFactory(
         name="Coldplay",
@@ -45,7 +45,9 @@ async def test_update_event_when_single_field_returns_200_and_only_changes_that_
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_update_event_when_all_fields_returns_200_and_updates_all(async_client: AsyncClient) -> None:
+async def test_update_event_when_all_fields_returns_200_and_updates_all(
+    async_client: AsyncClient, bypass_admin_jwt: None
+) -> None:
     event = EventFactory(
         name="Lakers vs Celtics",
         description="NBA regular season game",
@@ -72,7 +74,9 @@ async def test_update_event_when_all_fields_returns_200_and_updates_all(async_cl
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_update_event_when_cached_evicts_cache_entry(async_client: AsyncClient, redis: Redis) -> None:
+async def test_update_event_when_cached_evicts_cache_entry(
+    async_client: AsyncClient, redis: Redis, bypass_admin_jwt: None
+) -> None:
     event = EventFactory(
         name="Coldplay",
         description="Stadium tour stop",
@@ -90,7 +94,7 @@ async def test_update_event_when_cached_evicts_cache_entry(async_client: AsyncCl
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_update_event_when_not_found_returns_404(async_client: AsyncClient) -> None:
+async def test_update_event_when_not_found_returns_404(async_client: AsyncClient, bypass_admin_jwt: None) -> None:
     response = await async_client.patch(url="/admin/events/999999", json={"name": "Nope"})
 
     assert response.status_code == 404

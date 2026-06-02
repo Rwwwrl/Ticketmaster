@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from libs.sqlmodel_ext import Session
 
+from ticketmaster.admin.http.dependencies import validate_admin_jwt
 from ticketmaster.admin.http.schemas import request_schemas
 from ticketmaster.admin.services import AdminEventService
 from ticketmaster.exceptions import EventNotFoundException
@@ -14,6 +15,7 @@ admin_router = APIRouter()
     "/events/",
     status_code=status.HTTP_201_CREATED,
     response_model=response_schemas.EventResponseSchema,
+    dependencies=[Depends(validate_admin_jwt)],
 )
 async def create_event(
     payload: request_schemas.CreateEventRequestSchema,
@@ -34,6 +36,7 @@ async def create_event(
     "/events/{event_id}",
     status_code=status.HTTP_200_OK,
     response_model=response_schemas.EventResponseSchema,
+    dependencies=[Depends(validate_admin_jwt)],
 )
 async def update_event(
     event_id: int,

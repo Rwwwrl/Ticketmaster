@@ -10,7 +10,9 @@ from ticketmaster.models import Event
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_create_event_when_valid_payload_returns_201_and_persists(async_client: AsyncClient) -> None:
+async def test_create_event_when_valid_payload_returns_201_and_persists(
+    async_client: AsyncClient, bypass_admin_jwt: None
+) -> None:
     payload = {
         "name": "Coldplay",
         "description": "Stadium tour stop",
@@ -39,7 +41,7 @@ async def test_create_event_when_valid_payload_returns_201_and_persists(async_cl
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_create_event_when_missing_field_returns_422(async_client: AsyncClient) -> None:
+async def test_create_event_when_missing_field_returns_422(async_client: AsyncClient, bypass_admin_jwt: None) -> None:
     payload = {
         "name": "Coldplay",
         "type": EventTypeEnum.CONCERT,
