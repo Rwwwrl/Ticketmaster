@@ -37,6 +37,11 @@ restart-infra:
 
 
 [group('aws')]
+mint-admin-jwt:
+    poetry -C src/ticketmaster run python -m ticketmaster.admin.management.commands
+
+
+[group('aws')]
 aws-down env="test-eu" profile="tm-test":
     #!/usr/bin/env bash
     set -euo pipefail
