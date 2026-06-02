@@ -7,13 +7,13 @@ test:
 
 
 [group('run')]
-run-ticketmaster-http:
+runserver:
     poetry -C src/ticketmaster run fastapi dev src/ticketmaster/ticketmaster/http/main.py --no-reload --port 8080
 
 
 [group('run')]
 [working-directory('frontend')]
-run-frontend-dev:
+runui:
     npm run dev
 
 
@@ -34,6 +34,11 @@ down-infra:
 [group('infra')]
 restart-infra:
     docker compose -f docker-compose.yaml -p ticketmaster restart
+
+
+[group('aws')]
+mint-admin-jwt:
+    poetry -C src/ticketmaster run python -m ticketmaster.admin.management.commands
 
 
 [group('aws')]

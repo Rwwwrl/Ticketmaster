@@ -49,7 +49,7 @@ Resources:
         Variables:
           TICKETMASTER_API_URL: !Ref TicketmasterApiUrl
           JWT_KMS_KEY_ARN: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_KMS_KEY_ARN}}'
-          JWT_AUDIENCE: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_AUDIENCE}}'
+          JWT_AUDIENCE: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/JWT_AUDIENCE}}'
           JWT_ISSUER: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_ISSUER}}'
           LAMBDA_ROLE_ARN: !GetAtt ExecutionRole.Arn
 

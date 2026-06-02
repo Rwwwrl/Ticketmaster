@@ -22,6 +22,7 @@ from libs.sqlmodel_ext import Session
 from libs.sqlmodel_ext.utils import health_check as postgres_health_check
 from redis.asyncio import Redis
 
+from ticketmaster.admin.http.routes import admin_router
 from ticketmaster.http.v1.routes import v1_router
 from ticketmaster.settings import settings
 from ticketmaster.utils import init_sqlmodel_engine
@@ -90,3 +91,4 @@ async def readiness_check() -> dict[str, str]:
 
 
 app.include_router(router=v1_router, prefix="/v1")
+app.include_router(router=admin_router, prefix="/admin")
