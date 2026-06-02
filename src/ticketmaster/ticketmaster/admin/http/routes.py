@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, status
 from libs.sqlmodel_ext import Session
 
+from ticketmaster.admin.http.schemas import request_schemas
+from ticketmaster.admin.services import AdminEventService
 from ticketmaster.exceptions import EventNotFoundException
-from ticketmaster.http.admin.schemas import request_schemas
-from ticketmaster.http.admin.services import AdminEventService
 from ticketmaster.http.v1.schemas import response_schemas
 from ticketmaster.serializers import ToEventResponseSchemaSerializer
 

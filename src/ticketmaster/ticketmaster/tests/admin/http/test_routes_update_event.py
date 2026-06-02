@@ -4,10 +4,13 @@ import pytest
 from httpx import AsyncClient
 from libs.sqlmodel_ext import Session
 from libs.tests_ext.factories import insert
+from redis.asyncio import Redis
 from sqlmodel import select
 from ticketmaster.enums import EventTypeEnum
 from ticketmaster.http.v1.schemas.response_schemas import EventResponseSchema
 from ticketmaster.models import Event
+from ticketmaster.redis_cache.repositories import EventCacheRepository
+from ticketmaster.schemas.dtos import BaseEventDTO
 from ticketmaster.tests.factories import EventFactory
 
 
@@ -66,6 +69,24 @@ async def test_update_event_when_all_fields_returns_200_and_updates_all(async_cl
     assert body.description == "Shakespeare in the park"
     assert body.type == EventTypeEnum.THEATER
     assert body.start_at == datetime(2026, 7, 1, 18, 0, tzinfo=UTC)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_update_event_when_cached_evicts_cache_entry(async_client: AsyncClient, redis: Redis) -> None:
+    event = EventFactory(
+        name="Coldplay",
+        description="Stadium tour stop",
+        type=EventTypeEnum.CONCERT,
+        start_at=datetime(2026, 6, 2, 20, 0, tzinfo=UTC),
+    )
+    await insert(event)
+    await EventCacheRepository.set(redis=redis, dto=BaseEventDTO.from_sqlmodel(model=event))
+    assert await redis.get(name=f"event:{event.id}") is not None
+
+    response = await async_client.patch(url=f"/admin/events/{event.id}", json={"name": "Coldplay — Rescheduled"})
+
+    assert response.status_code == 200
+    assert await redis.get(name=f"event:{event.id}") is None
 
 
 @pytest.mark.asyncio(loop_scope="session")

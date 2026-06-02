@@ -1,10 +1,14 @@
+from contextlib import suppress
 from datetime import datetime
 from typing import Any
 
+from libs.redis_ext import redis_proxy
+from redis.exceptions import RedisError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from ticketmaster.admin.redis_cache.repositories import AdminEventCacheRepository
+from ticketmaster.admin.repositories import AdminEventRepository
 from ticketmaster.enums import EventTypeEnum
-from ticketmaster.http.admin.repositories import AdminEventRepository
 from ticketmaster.schemas.dtos import BaseEventDTO
 from ticketmaster.services import EventService
 
@@ -29,4 +33,13 @@ class AdminEventService(EventService):
 
     @classmethod
     async def update_event(cls, session: AsyncSession, event_id: int, changes: dict[str, Any]) -> BaseEventDTO:
-        return await AdminEventRepository.update(session=session, event_id=event_id, changes=changes)
+        dto = await AdminEventRepository.update(
+            session=session,
+            event_id=event_id,
+            changes=changes,
+        )
+
+        with suppress(RedisError):
+            await AdminEventCacheRepository.delete_by_id(redis=redis_proxy.redis, _id=event_id)
+
+        return dto

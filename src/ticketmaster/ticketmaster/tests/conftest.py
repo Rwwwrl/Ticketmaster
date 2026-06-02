@@ -7,7 +7,7 @@ from httpx import ASGITransport, AsyncClient
 from libs.sqlmodel_ext import BaseSqlModel
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine
-from ticketmaster.http.admin.routes import admin_router
+from ticketmaster.admin.http.routes import admin_router
 from ticketmaster.http.v1.routes import v1_router
 from ticketmaster.models import Event, Ticket, User
 from ticketmaster.settings import Settings
