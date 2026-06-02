@@ -13,7 +13,7 @@ class CreateEventRequestSchema(BaseRequestSchema):
 
 
 class UpdateEventRequestSchema(BaseRequestSchema):
-    name: str | None = None
-    description: str | None = None
-    type: EventTypeEnum | None = None
-    start_at: datetime | None = None
+    name: str = None
+    description: str = None
+    type: EventTypeEnum = None
+    start_at: datetime = None
