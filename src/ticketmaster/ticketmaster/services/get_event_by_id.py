@@ -1,6 +1,7 @@
 from contextlib import suppress
 
-from libs.redis_ext import FromRawCacheValidationError, redis_proxy
+from libs.redis_ext import redis_proxy
+from libs.redis_ext.cache import FromRawCacheValidationError
 from redis.exceptions import RedisError
 from sqlmodel.ext.asyncio.session import AsyncSession
 

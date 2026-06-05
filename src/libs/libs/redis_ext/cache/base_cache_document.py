@@ -2,7 +2,7 @@ from typing import ClassVar, Self
 
 from pydantic import BaseModel, ValidationError
 
-from libs.redis_ext.exceptions import FromRawCacheValidationError
+from libs.redis_ext.cache.exceptions import FromRawCacheValidationError
 
 
 class BaseCacheDocument(BaseModel):

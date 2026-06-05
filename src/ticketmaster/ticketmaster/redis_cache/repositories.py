@@ -1,4 +1,4 @@
-from libs.redis_ext import FromRawCacheValidationError
+from libs.redis_ext.cache import FromRawCacheValidationError
 from redis.asyncio import Redis
 
 from ticketmaster.exceptions import EventCacheDocumentNotFoundException

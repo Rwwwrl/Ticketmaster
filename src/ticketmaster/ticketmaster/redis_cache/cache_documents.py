@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, ClassVar, Self
 
-from libs.redis_ext import BaseCacheDocument
+from libs.redis_ext.cache import BaseCacheDocument
 
 from ticketmaster.enums import CurrencyEnum, EventTypeEnum
 
