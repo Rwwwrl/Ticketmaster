@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, ClassVar, Self
 
 from libs.redis_ext import BaseCacheDocument
 
@@ -11,6 +11,8 @@ if TYPE_CHECKING:
 
 
 class EventCacheDocument(BaseCacheDocument):
+    version: ClassVar[int] = 1
+
     id: int
     name: str
     description: str

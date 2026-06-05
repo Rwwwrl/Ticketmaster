@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime
 
 import pytest
@@ -10,7 +11,9 @@ from sqlalchemy import update
 from ticketmaster.enums import EventTypeEnum
 from ticketmaster.http.v1.schemas.response_schemas import EventResponseSchema
 from ticketmaster.models import Event
+from ticketmaster.redis_cache.cache_documents import EventCacheDocument
 from ticketmaster.redis_cache.repositories import EventCacheRepository
+from ticketmaster.schemas.dtos import BaseEventDTO
 from ticketmaster.tests.factories import EventFactory
 
 
@@ -27,13 +30,23 @@ async def test_get_event_by_id_warms_cache_on_first_request(
     )
     await insert(event)
 
-    assert await redis.exists(EventCacheRepository._event_key(event_id=event.id)) == 0
+    assert (
+        await redis.exists(
+            EventCacheRepository._event_key_for_version(event_id=event.id, version=EventCacheDocument.version)
+        )
+        == 0
+    )
 
     response = await async_client.get(url=f"/v1/events/{event.id}")
 
     assert response.status_code == 200
     assert EventResponseSchema(**response.json()).name == "Coldplay"
-    assert await redis.exists(EventCacheRepository._event_key(event_id=event.id)) == 1
+    assert (
+        await redis.exists(
+            EventCacheRepository._event_key_for_version(event_id=event.id, version=EventCacheDocument.version)
+        )
+        == 1
+    )
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -59,6 +72,38 @@ async def test_get_event_by_id_serves_from_cache_when_db_row_changes_underneath(
 
     assert second_response.status_code == 200
     assert EventResponseSchema(**second_response.json()).name == "Original Name"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_get_event_by_id_falls_through_to_db_when_cache_document_is_stale(
+    async_client: AsyncClient,
+    redis: Redis,
+) -> None:
+    event = EventFactory(
+        name="Stale Cache Show",
+        start_at=datetime(2026, 5, 1, tzinfo=UTC),
+    )
+    await insert(event)
+
+    stale_payload = EventCacheDocument.from_dto(dto=BaseEventDTO.from_sqlmodel(model=event)).model_dump(
+        mode="json", exclude={"price"}
+    )
+    await redis.set(
+        name=EventCacheRepository._event_key_for_version(event_id=event.id, version=EventCacheDocument.version),
+        value=json.dumps(stale_payload),
+    )
+
+    response = await async_client.get(url=f"/v1/events/{event.id}")
+
+    assert response.status_code == 200
+    assert EventResponseSchema(**response.json()).name == "Stale Cache Show"
+
+    rewarmed_document = EventCacheDocument.from_raw_cache(
+        await redis.get(
+            name=EventCacheRepository._event_key_for_version(event_id=event.id, version=EventCacheDocument.version)
+        )
+    )
+    assert rewarmed_document.id == event.id
 
 
 @pytest.mark.asyncio(loop_scope="session")
