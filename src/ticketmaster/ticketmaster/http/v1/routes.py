@@ -5,7 +5,7 @@ from libs.datetime_ext.utils import utc_now
 from libs.sqlmodel_ext import Session
 from sqlalchemy.exc import IntegrityError
 
-from ticketmaster import consts
+from ticketmaster import consts, services
 from ticketmaster.cursors import EventCursorDTO
 from ticketmaster.enums import EventSortKeyEnum
 from ticketmaster.exceptions import CursorSortKeyMismatchException, EventNotFoundException
@@ -23,7 +23,6 @@ from ticketmaster.serializers import (
     ToTicketResponseSchemaSerializer,
     ToUserResponseSchemaSerializer,
 )
-from ticketmaster.services import EventService, UserService
 
 v1_router = APIRouter()
 
@@ -71,7 +70,7 @@ async def delete_me(
     user: Annotated[BaseUserDTO, Depends(validate_user_jwt)],
 ) -> Response:
     async with Session() as session, session.begin():
-        await UserService.delete_user(session=session, user=user)
+        await services.delete_user(session=session, user=user)
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -88,7 +87,7 @@ async def list_events_page(
 ) -> response_schemas.EventsPageResponseSchema:
     try:
         async with Session() as session, session.begin():
-            items, next_cursor_pair = await EventService.list_events_page(
+            items, next_cursor_pair = await services.list_events_page(
                 session=session,
                 sort_key=sort_key,
                 cursor=cursor,
@@ -139,7 +138,7 @@ async def search_events(
 async def get_event_by_id(event_id: int) -> response_schemas.EventResponseSchema:
     try:
         async with Session() as session, session.begin():
-            event = await EventService.get_event_by_id(session=session, _id=event_id)
+            event = await services.get_event_by_id(session=session, _id=event_id)
     except EventNotFoundException:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 

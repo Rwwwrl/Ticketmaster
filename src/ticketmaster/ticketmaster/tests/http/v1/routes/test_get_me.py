@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI
 from httpx import AsyncClient
 from ticketmaster.http.v1.dependencies import validate_user_jwt
 from ticketmaster.schemas.dtos import BaseUserDTO
@@ -29,16 +29,6 @@ def signed_in_user(fastapi_app: FastAPI) -> Iterator[BaseUserDTO]:
     dto = _dto()
     fastapi_app.dependency_overrides[validate_user_jwt] = lambda: dto
     yield dto
-    fastapi_app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def invalid_jwt(fastapi_app: FastAPI) -> Iterator[None]:
-    def _raise() -> BaseUserDTO:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-
-    fastapi_app.dependency_overrides[validate_user_jwt] = _raise
-    yield
     fastapi_app.dependency_overrides.clear()
 
 
