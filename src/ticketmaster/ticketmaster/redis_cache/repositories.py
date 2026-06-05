@@ -1,3 +1,4 @@
+from libs.redis_ext.cache import FromRawCacheValidationError
 from redis.asyncio import Redis
 
 from ticketmaster.exceptions import EventCacheDocumentNotFoundException
@@ -9,23 +10,23 @@ _EVENT_TTL_SECONDS = 300
 
 class EventCacheRepository:
     @classmethod
-    def _event_key(cls, event_id: int) -> str:
-        return f"event:{event_id}"
+    def _event_key_for_version(cls, event_id: int, version: int) -> str:
+        return f"event:v{version}:{event_id}"
 
     @classmethod
     async def get_by_id(cls, redis: Redis, _id: int) -> BaseEventDTO:
-        raw = await redis.get(name=cls._event_key(event_id=_id))
+        raw = await redis.get(name=cls._event_key_for_version(event_id=_id, version=EventCacheDocument.version))
         if raw is None:
             raise EventCacheDocumentNotFoundException(f"Event cache document not found for id={_id}")
 
-        cache_document = EventCacheDocument.model_validate_json(raw)
+        cache_document = EventCacheDocument.from_raw_cache(raw)
         return BaseEventDTO.from_cache_document(document=cache_document)
 
     @classmethod
     async def set(cls, redis: Redis, dto: BaseEventDTO, ttl_seconds: int = _EVENT_TTL_SECONDS) -> None:
         cache_document = EventCacheDocument.from_dto(dto=dto)
         await redis.set(
-            name=cls._event_key(event_id=cache_document.id),
+            name=cls._event_key_for_version(event_id=cache_document.id, version=EventCacheDocument.version),
             value=cache_document.model_dump_json(),
             ex=ttl_seconds,
         )
@@ -35,7 +36,7 @@ class EventCacheRepository:
         if not ids:
             return []
 
-        keys = [cls._event_key(event_id=event_id) for event_id in ids]
+        keys = [cls._event_key_for_version(event_id=event_id, version=EventCacheDocument.version) for event_id in ids]
 
         raw_documents = await redis.mget(keys=keys)
 
@@ -44,7 +45,11 @@ class EventCacheRepository:
             if raw is None:
                 continue
 
-            cache_document = EventCacheDocument.model_validate_json(raw)
+            try:
+                cache_document = EventCacheDocument.from_raw_cache(raw)
+            except FromRawCacheValidationError:
+                continue
+
             documents.append(BaseEventDTO.from_cache_document(document=cache_document))
 
         return documents
@@ -58,7 +63,7 @@ class EventCacheRepository:
             for dto in dtos:
                 cache_document = EventCacheDocument.from_dto(dto=dto)
                 pipe.set(
-                    name=cls._event_key(event_id=cache_document.id),
+                    name=cls._event_key_for_version(event_id=cache_document.id, version=EventCacheDocument.version),
                     value=cache_document.model_dump_json(),
                     ex=ttl_seconds,
                 )

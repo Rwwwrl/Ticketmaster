@@ -1,6 +1,7 @@
 from contextlib import suppress
 
 from libs.redis_ext import redis_proxy
+from libs.redis_ext.cache import FromRawCacheValidationError
 from redis.exceptions import RedisError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -11,7 +12,7 @@ from ticketmaster.schemas.dtos import BaseEventDTO
 
 
 async def get_event_by_id(session: AsyncSession, _id: int) -> BaseEventDTO:
-    with suppress(RedisError, EventCacheDocumentNotFoundException):
+    with suppress(RedisError, EventCacheDocumentNotFoundException, FromRawCacheValidationError):
         return await EventCacheRepository.get_by_id(redis=redis_proxy.redis, _id=_id)
 
     event = await EventRepository.get_by_id(session=session, _id=_id)

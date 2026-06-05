@@ -1,4 +1,4 @@
-from libs.redis_ext import CacheDocumentNotFoundException
+from libs.redis_ext.cache import CacheDocumentNotFoundException
 from libs.sqlmodel_ext import NotFoundException
 
 
