@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from libs.sqlmodel_ext import Session
 
+from ticketmaster.admin import services
 from ticketmaster.admin.http.dependencies import validate_admin_jwt
 from ticketmaster.admin.http.schemas import request_schemas
-from ticketmaster.admin.services import AdminEventService
 from ticketmaster.exceptions import EventNotFoundException
 from ticketmaster.http.v1.schemas import response_schemas
 from ticketmaster.serializers import ToEventResponseSchemaSerializer
@@ -21,7 +21,7 @@ async def create_event(
     payload: request_schemas.CreateEventRequestSchema,
 ) -> response_schemas.EventResponseSchema:
     async with Session() as session, session.begin():
-        dto = await AdminEventService.create_event(
+        dto = await services.create_event(
             session=session,
             name=payload.name,
             description=payload.description,
@@ -48,7 +48,7 @@ async def update_event(
 
     try:
         async with Session() as session, session.begin():
-            dto = await AdminEventService.update_event(session=session, event_id=event_id, changes=changes)
+            dto = await services.update_event(session=session, event_id=event_id, changes=changes)
     except EventNotFoundException:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 
