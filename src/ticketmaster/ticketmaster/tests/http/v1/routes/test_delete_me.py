@@ -1,13 +1,13 @@
 """Endpoint contract tests for DELETE /v1/me/. Auth dependency is bypassed via dependency_overrides;
 Cognito client is monkey-patched on the shared aws_session singleton."""
 
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import pytest_asyncio
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI
 from httpx import AsyncClient
 from libs.aws.session import aws_session
 from libs.sqlmodel_ext import Session
@@ -30,16 +30,6 @@ async def signed_in_user_in_db(fastapi_app: FastAPI) -> AsyncIterator[BaseUserDT
 
     fastapi_app.dependency_overrides[validate_user_jwt] = lambda: dto
     yield dto
-    fastapi_app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def invalid_jwt(fastapi_app: FastAPI) -> Iterator[None]:
-    def _raise() -> BaseUserDTO:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-
-    fastapi_app.dependency_overrides[validate_user_jwt] = _raise
-    yield
     fastapi_app.dependency_overrides.clear()
 
 
