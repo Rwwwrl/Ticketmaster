@@ -9,6 +9,10 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: deploy-test-eu
+  cancel-in-progress: false
+
 jobs:
   publish-libs:
     uses: ./.github/workflows/called-publish-python-package.yaml
