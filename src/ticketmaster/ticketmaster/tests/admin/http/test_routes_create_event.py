@@ -1,10 +1,11 @@
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
 from libs.sqlmodel_ext import Session
 from sqlmodel import select
-from ticketmaster.enums import EventTypeEnum
+from ticketmaster.enums import CurrencyEnum, EventTypeEnum
 from ticketmaster.http.v1.schemas.response_schemas import EventResponseSchema
 from ticketmaster.models import Event
 
@@ -18,6 +19,8 @@ async def test_create_event_when_valid_payload_returns_201_and_persists(
         "description": "Stadium tour stop",
         "type": EventTypeEnum.CONCERT,
         "start_at": datetime(2026, 6, 2, 20, 0, tzinfo=UTC).isoformat(),
+        "price": "49.99",
+        "currency": CurrencyEnum.EUR,
     }
 
     response = await async_client.post(url="/admin/events/", json=payload)
@@ -29,6 +32,8 @@ async def test_create_event_when_valid_payload_returns_201_and_persists(
     assert body.description == payload["description"]
     assert body.type == EventTypeEnum.CONCERT
     assert body.start_at == datetime(2026, 6, 2, 20, 0, tzinfo=UTC)
+    assert body.price == Decimal("49.99")
+    assert body.currency == CurrencyEnum.EUR
 
     async with Session() as session, session.begin():
         persisted = (await session.exec(select(Event).where(Event.id == body.id))).first()
@@ -38,6 +43,8 @@ async def test_create_event_when_valid_payload_returns_201_and_persists(
         assert persisted.description == payload["description"]
         assert persisted.type == EventTypeEnum.CONCERT
         assert persisted.start_at == datetime(2026, 6, 2, 20, 0, tzinfo=UTC)
+        assert persisted.price == Decimal("49.99")
+        assert persisted.currency == CurrencyEnum.EUR
 
 
 @pytest.mark.asyncio(loop_scope="session")

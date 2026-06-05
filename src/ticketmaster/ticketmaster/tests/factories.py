@@ -1,6 +1,8 @@
+from decimal import Decimal
+
 import factory
 from libs.datetime_ext.utils import utc_now
-from ticketmaster.enums import EventTypeEnum, TicketStatusEnum
+from ticketmaster.enums import CurrencyEnum, EventTypeEnum, TicketStatusEnum
 from ticketmaster.models import Event, Ticket, User
 
 
@@ -12,6 +14,8 @@ class EventFactory(factory.Factory):
     description = "A test event"
     type = EventTypeEnum.SPORT
     start_at = factory.LazyFunction(utc_now)
+    price = Decimal("10.00")
+    currency = CurrencyEnum.EUR
 
 
 class UserFactory(factory.Factory):

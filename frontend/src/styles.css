@@ -74,6 +74,27 @@ pre {
     padding: 0.5rem;
 }
 
+.sort-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.sort-toggle span {
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.sort-toggle button {
+    padding: 0.35rem 0.75rem;
+}
+
+.sort-toggle button.active {
+    background: #111;
+    color: #fff;
+}
+
 .event-list {
     list-style: none;
     padding: 0;

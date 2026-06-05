@@ -27,6 +27,8 @@ async def create_event(
             description=payload.description,
             type=payload.type,
             start_at=payload.start_at,
+            price=payload.price,
+            currency=payload.currency,
         )
 
     return ToEventResponseSchemaSerializer.serialize(dto=dto)

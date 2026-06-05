@@ -12,3 +12,13 @@ class TicketStatusEnum(StrEnum):
     RESERVED = auto()
     BOOKED = auto()
     ANONYMOUS_BOOKED = auto()
+
+
+class CurrencyEnum(StrEnum):
+    EUR = "EUR"
+    USD = "USD"
+
+
+class EventSortKeyEnum(StrEnum):
+    START_AT = auto()
+    PRICE = auto()

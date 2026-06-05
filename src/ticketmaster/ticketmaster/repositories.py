@@ -8,31 +8,20 @@ from uuid import UUID
 from libs.common.schemas.dto import DTO
 from libs.datetime_ext.utils import utc_now
 from sqlalchemy import and_, delete, func, or_, tuple_, update
+from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ticketmaster.enums import TicketStatusEnum
+from ticketmaster.cursors import EventCursorDTO
+from ticketmaster.enums import EventSortKeyEnum, TicketStatusEnum
 from ticketmaster.exceptions import EventNotFoundException, UserNotFoundException
 from ticketmaster.models import Event, Ticket, User
 from ticketmaster.schemas.dtos import BaseEventDTO, BaseTicketDTO, BaseUserDTO
 
-
-class EventCursorDTO(DTO):
-    started_at: datetime
-    id: int
-
-    def encode(self) -> str:
-        raw = json.dumps(obj={"started_at": self.started_at.isoformat(), "_id": self.id}).encode()
-        return base64.urlsafe_b64encode(s=raw).decode()
-
-    @classmethod
-    def decode(cls, cursor: str) -> Self:
-        try:
-            raw = base64.b64decode(s=cursor.encode(), altchars=b"-_", validate=True)
-            payload = json.loads(raw)
-            return cls(started_at=datetime.fromisoformat(payload["started_at"]), id=int(payload["_id"]))
-        except binascii.Error, KeyError, TypeError, ValueError:
-            raise ValueError("Invalid event cursor")
+_SORT_KEY_TO_POSTGRES_COLUMN: dict[EventSortKeyEnum, InstrumentedAttribute] = {
+    EventSortKeyEnum.START_AT: Event.start_at,
+    EventSortKeyEnum.PRICE: Event.price,
+}
 
 
 class EventSearchCursorDTO(DTO):
@@ -65,25 +54,34 @@ class EventRepository:
         return BaseEventDTO.from_sqlmodel(model=event)
 
     @classmethod
-    async def list_ids_sorted_by_start_at(
+    async def list_ids_paginated(
         cls,
         session: AsyncSession,
+        sort_key: EventSortKeyEnum,
         cursor: EventCursorDTO | None,
         page_size: int,
     ) -> tuple[list[int], EventCursorDTO | None]:
-        statement = select(Event.id, Event.start_at).order_by(Event.start_at, Event.id).limit(page_size + 1)
+        effective_sort_key = cursor.sort_key if cursor is not None else sort_key
+        column = _SORT_KEY_TO_POSTGRES_COLUMN[effective_sort_key]
+
+        statement = select(Event.id, column).order_by(column, Event.id).limit(page_size + 1)
+
         if cursor is not None:
-            statement = statement.where(tuple_(Event.start_at, Event.id) > tuple_(cursor.started_at, cursor.id))
+            statement = statement.where(tuple_(column, Event.id) > tuple_(cursor.sort_key_value, cursor.id))
 
         rows = (await session.exec(statement)).all()
         has_next_page = len(rows) > page_size
         kept_rows = rows[:page_size]
 
-        ids = [event_id for event_id, _start_at in kept_rows]
+        ids = [event_id for event_id, _value in kept_rows]
 
         if has_next_page:
-            last_event_id, last_start_at = kept_rows[-1]
-            next_cursor = EventCursorDTO(started_at=last_start_at, id=last_event_id)
+            last_event_id, last_column_value = kept_rows[-1]
+            next_cursor = EventCursorDTO(
+                sort_key=effective_sort_key,
+                sort_key_value=last_column_value,
+                id=last_event_id,
+            )
         else:
             next_cursor = None
 

@@ -1,20 +1,22 @@
 import asyncio
+from typing import Annotated
 
 import httpx
 import jwt
 from cryptography.hazmat.primitives import serialization
-from fastapi import Header, HTTPException, status
+from fastapi import Header, HTTPException, Query, status
 from jwt.algorithms import RSAAlgorithm
 from libs.aws.kms_public_key_cache import KMSPublicKeyCache
 from libs.sqlmodel_ext import Session
 
+from ticketmaster.cursors import EventCursorDTO
 from ticketmaster.exceptions import UserNotFoundException
-from ticketmaster.repositories import EventCursorDTO, EventSearchCursorDTO, UserRepository
+from ticketmaster.repositories import EventSearchCursorDTO, UserRepository
 from ticketmaster.schemas.dtos import BaseUserDTO
 from ticketmaster.settings import settings
 
 
-def decode_event_cursor(cursor: str | None) -> EventCursorDTO | None:
+def decode_event_cursor(cursor: Annotated[str | None, Query()] = None) -> EventCursorDTO | None:
     if cursor is None:
         return None
     try:

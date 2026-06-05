@@ -1,9 +1,10 @@
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from libs.fastapi_ext.schemas.base_schemas import BaseResponseSchema
 
-from ticketmaster.enums import EventTypeEnum, TicketStatusEnum
+from ticketmaster.enums import CurrencyEnum, EventTypeEnum, TicketStatusEnum
 
 
 class EventResponseSchema(BaseResponseSchema):
@@ -12,6 +13,8 @@ class EventResponseSchema(BaseResponseSchema):
     description: str
     type: EventTypeEnum
     start_at: datetime
+    price: Decimal
+    currency: CurrencyEnum
 
 
 class EventsPageResponseSchema(BaseResponseSchema):

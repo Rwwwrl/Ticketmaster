@@ -1,10 +1,11 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Self
 from uuid import UUID
 
 from libs.common.schemas.dto import DTO
 
-from ticketmaster.enums import EventTypeEnum, TicketStatusEnum
+from ticketmaster.enums import CurrencyEnum, EventTypeEnum, TicketStatusEnum
 from ticketmaster.models import Event, Ticket, User
 from ticketmaster.redis_cache.cache_documents import EventCacheDocument
 
@@ -15,6 +16,8 @@ class BaseEventDTO(DTO):
     description: str
     type: EventTypeEnum
     start_at: datetime
+    price: Decimal
+    currency: CurrencyEnum
 
     @classmethod
     def from_sqlmodel(cls, model: Event) -> Self:
