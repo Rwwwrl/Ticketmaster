@@ -1,4 +1,3 @@
-from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -6,7 +5,10 @@ from libs.datetime_ext.utils import utc_now
 from libs.sqlmodel_ext import Session
 from sqlalchemy.exc import IntegrityError
 
-from ticketmaster.exceptions import EventNotFoundException
+from ticketmaster import consts
+from ticketmaster.cursors import EventCursorDTO
+from ticketmaster.enums import EventSortKeyEnum
+from ticketmaster.exceptions import CursorSortKeyMismatchException, EventNotFoundException
 from ticketmaster.http.v1.dependencies import (
     decode_event_cursor,
     decode_event_search_cursor,
@@ -24,8 +26,6 @@ from ticketmaster.serializers import (
 from ticketmaster.services import EventService, UserService
 
 v1_router = APIRouter()
-
-_RESERVATION_TTL = timedelta(minutes=10)
 
 
 @v1_router.post(
@@ -82,17 +82,20 @@ async def delete_me(
     response_model=response_schemas.EventsPageResponseSchema,
 )
 async def list_events_page(
-    cursor: Annotated[str | None, Query()] = None,
+    sort_key: Annotated[EventSortKeyEnum, Query()],
+    cursor: Annotated[EventCursorDTO | None, Depends(decode_event_cursor)],
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> response_schemas.EventsPageResponseSchema:
-    decoded_cursor = decode_event_cursor(cursor=cursor)
-
-    async with Session() as session, session.begin():
-        items, next_cursor_pair = await EventService.list_events_page(
-            session=session,
-            cursor=decoded_cursor,
-            page_size=page_size,
-        )
+    try:
+        async with Session() as session, session.begin():
+            items, next_cursor_pair = await EventService.list_events_page(
+                session=session,
+                sort_key=sort_key,
+                cursor=cursor,
+                page_size=page_size,
+            )
+    except CursorSortKeyMismatchException:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cursor does not match sort_key")
 
     return response_schemas.EventsPageResponseSchema(
         items=[ToEventResponseSchemaSerializer.serialize(dto=dto) for dto in items],
@@ -171,7 +174,7 @@ async def reserve_ticket(
             ticket_id=ticket_id,
             user_id=user.id,
             now=utc_now(),
-            reservation_ttl=_RESERVATION_TTL,
+            reservation_ttl=consts.RESERVATION_TTL,
         )
 
     if not ticket_reserved:
@@ -196,7 +199,7 @@ async def book_ticket(
             ticket_id=ticket_id,
             user_id=user.id,
             now=utc_now(),
-            reservation_ttl=_RESERVATION_TTL,
+            reservation_ttl=consts.RESERVATION_TTL,
         )
 
     if not ticket_booked:

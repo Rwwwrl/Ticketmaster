@@ -5,9 +5,11 @@ from libs.redis_ext import redis_proxy
 from redis.exceptions import RedisError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ticketmaster.exceptions import EventCacheDocumentNotFoundException
+from ticketmaster.cursors import EventCursorDTO
+from ticketmaster.enums import EventSortKeyEnum
+from ticketmaster.exceptions import CursorSortKeyMismatchException, EventCacheDocumentNotFoundException
 from ticketmaster.redis_cache.repositories import EventCacheRepository
-from ticketmaster.repositories import EventCursorDTO, EventRepository, TicketRepository, UserRepository
+from ticketmaster.repositories import EventRepository, TicketRepository, UserRepository
 from ticketmaster.schemas.dtos import BaseEventDTO, BaseUserDTO
 
 
@@ -42,11 +44,16 @@ class EventService:
     async def list_events_page(
         cls,
         session: AsyncSession,
+        sort_key: EventSortKeyEnum,
         cursor: EventCursorDTO | None,
         page_size: int,
     ) -> tuple[list[BaseEventDTO], EventCursorDTO | None]:
-        event_ids, next_cursor = await EventRepository.list_ids_sorted_by_start_at(
+        if cursor is not None and cursor.sort_key != sort_key:
+            raise CursorSortKeyMismatchException("`cursor.sort_key` and `sort_key` mismatch")
+
+        event_ids, next_cursor = await EventRepository.list_ids_paginated(
             session=session,
+            sort_key=sort_key,
             cursor=cursor,
             page_size=page_size,
         )

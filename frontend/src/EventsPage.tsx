@@ -2,12 +2,16 @@ import { type FormEventHandler, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { parseDetail, publicApiFetch } from './api';
 
+type SortKey = 'start_at' | 'price';
+
 interface EventItem {
     id: number;
     name: string;
     description: string;
     type: string;
     start_at: string;
+    price: number;
+    currency: string;
 }
 
 interface EventsPageResponse {
@@ -16,18 +20,24 @@ interface EventsPageResponse {
     next_cursor: string | null;
 }
 
-function buildEventsUrl(q: string, cursor: string | null): string {
+function buildEventsUrl(q: string, cursor: string | null, sortBy: SortKey): string {
     if (q) {
+        // NOTE: search is rank-ordered, so sort_key does not apply here.
         let url = `/api/v1/events/search?q=${encodeURIComponent(q)}`;
         if (cursor) {
             url += `&cursor=${encodeURIComponent(cursor)}`;
         }
         return url;
     }
+    const params = new URLSearchParams({ sort_key: sortBy });
     if (cursor) {
-        return `/api/v1/events/?cursor=${encodeURIComponent(cursor)}`;
+        params.set('cursor', cursor);
     }
-    return '/api/v1/events/';
+    return `/api/v1/events/?${params.toString()}`;
+}
+
+function formatPrice(price: number, currency: string): string {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(Number(price));
 }
 
 export function EventsPage() {
@@ -37,12 +47,13 @@ export function EventsPage() {
     const [error, setError] = useState<string>('');
     const [query, setQuery] = useState<string>('');
     const [activeQuery, setActiveQuery] = useState<string>('');
+    const [sortBy, setSortBy] = useState<SortKey>('start_at');
 
-    const fetchEvents = async (q: string, cursor: string | null, append: boolean) => {
+    const fetchEvents = async (q: string, cursor: string | null, append: boolean, sort: SortKey) => {
         setPending(true);
         setError('');
         try {
-            const response = await publicApiFetch(buildEventsUrl(q, cursor));
+            const response = await publicApiFetch(buildEventsUrl(q, cursor, sort));
             if (!response.ok) {
                 setError(await parseDetail(response));
                 return;
@@ -61,7 +72,7 @@ export function EventsPage() {
         let cancelled = false;
         const run = async () => {
             try {
-                const response = await publicApiFetch('/api/v1/events/');
+                const response = await publicApiFetch(buildEventsUrl('', null, 'start_at'));
                 if (cancelled) {
                     return;
                 }
@@ -96,14 +107,24 @@ export function EventsPage() {
         const trimmed = query.trim();
         setActiveQuery(trimmed);
         setNextCursor(null);
-        void fetchEvents(trimmed, null, false);
+        void fetchEvents(trimmed, null, false, sortBy);
     };
 
     const handleLoadMore = () => {
         if (!nextCursor) {
             return;
         }
-        void fetchEvents(activeQuery, nextCursor, true);
+        void fetchEvents(activeQuery, nextCursor, true, sortBy);
+    };
+
+    const handleSort = (next: SortKey) => {
+        // NOTE: sorting only applies to browse mode; switching restarts pagination.
+        if (pending || next === sortBy || activeQuery) {
+            return;
+        }
+        setSortBy(next);
+        setNextCursor(null);
+        void fetchEvents('', null, false, next);
     };
 
     return (
@@ -120,6 +141,25 @@ export function EventsPage() {
                     Search
                 </button>
             </form>
+            <div className="sort-toggle">
+                <span>Sort by:</span>
+                <button
+                    type="button"
+                    className={sortBy === 'start_at' ? 'active' : ''}
+                    disabled={pending || Boolean(activeQuery)}
+                    onClick={() => handleSort('start_at')}
+                >
+                    Date
+                </button>
+                <button
+                    type="button"
+                    className={sortBy === 'price' ? 'active' : ''}
+                    disabled={pending || Boolean(activeQuery)}
+                    onClick={() => handleSort('price')}
+                >
+                    Price
+                </button>
+            </div>
             {error && <p className="error">{error}</p>}
             {items.length === 0 && !pending && !error && (
                 <p>{activeQuery ? 'No events found.' : 'No events.'}</p>
@@ -130,7 +170,8 @@ export function EventsPage() {
                         <Link to={`/events/${event.id}`}>
                             <strong>{event.name}</strong>
                             <span className="event-meta">
-                                {event.type} · {new Date(event.start_at).toLocaleString()}
+                                {event.type} · {new Date(event.start_at).toLocaleString()} ·{' '}
+                                {formatPrice(event.price, event.currency)}
                             </span>
                         </Link>
                     </li>

@@ -1,5 +1,6 @@
 from contextlib import suppress
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
 from libs.redis_ext import redis_proxy
@@ -8,7 +9,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ticketmaster.admin.redis_cache.repositories import AdminEventCacheRepository
 from ticketmaster.admin.repositories import AdminEventRepository
-from ticketmaster.enums import EventTypeEnum
+from ticketmaster.enums import CurrencyEnum, EventTypeEnum
 from ticketmaster.schemas.dtos import BaseEventDTO
 from ticketmaster.services import EventService
 
@@ -22,6 +23,8 @@ class AdminEventService(EventService):
         description: str,
         type: EventTypeEnum,
         start_at: datetime,
+        price: Decimal,
+        currency: CurrencyEnum,
     ) -> BaseEventDTO:
         return await AdminEventRepository.create(
             session=session,
@@ -29,6 +32,8 @@ class AdminEventService(EventService):
             description=description,
             type=type,
             start_at=start_at,
+            price=price,
+            currency=currency,
         )
 
     @classmethod

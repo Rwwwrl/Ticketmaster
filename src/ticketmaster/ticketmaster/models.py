@@ -1,12 +1,13 @@
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from libs.sqlmodel_ext import BaseSqlModel, EnumString
-from sqlalchemy import Column, Computed, DateTime, Identity, Index, Integer, PrimaryKeyConstraint
+from sqlalchemy import Column, Computed, DateTime, Identity, Index, Integer, Numeric, PrimaryKeyConstraint
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlmodel import Field
 
-from ticketmaster.enums import EventTypeEnum, TicketStatusEnum
+from ticketmaster.enums import CurrencyEnum, EventTypeEnum, TicketStatusEnum
 
 
 class Event(BaseSqlModel, table=True):
@@ -14,6 +15,7 @@ class Event(BaseSqlModel, table=True):
     __table_args__ = (
         PrimaryKeyConstraint("id"),
         Index("ix_event_start_at_id", "start_at", "id"),
+        Index("ix_event_price_id", "price", "id"),
         Index("ix_event_search_vector", "search_vector", postgresql_using="gin"),
     )
 
@@ -22,6 +24,8 @@ class Event(BaseSqlModel, table=True):
     description: str
     type: EventTypeEnum = Field(sa_type=EnumString(EventTypeEnum))
     start_at: datetime = Field(sa_type=DateTime(timezone=True))
+    price: Decimal = Field(sa_type=Numeric(precision=10, scale=2))
+    currency: CurrencyEnum = Field(sa_type=EnumString(CurrencyEnum))
 
     # NOTE @sosov: Postgres-managed generated tsvector for full-text search; Python never
     # writes to it.
