@@ -183,3 +183,4 @@ dist-ssr/
 **/.obsidian
 .ruff_cache
 obsidian-scripts/
+.pi
