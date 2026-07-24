@@ -12,7 +12,7 @@ from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ticketmaster.cursors import EventCursorDTO
+from ticketmaster.cursors import EventDBCursorDTO
 from ticketmaster.enums import EventSortKeyEnum, TicketStatusEnum
 from ticketmaster.exceptions import EventNotFoundException, UserNotFoundException
 from ticketmaster.models import Event, Ticket, User
@@ -58,9 +58,9 @@ class EventRepository:
         cls,
         session: AsyncSession,
         sort_key: EventSortKeyEnum,
-        cursor: EventCursorDTO | None,
+        cursor: EventDBCursorDTO | None,
         page_size: int,
-    ) -> tuple[list[int], EventCursorDTO | None]:
+    ) -> tuple[list[int], EventDBCursorDTO | None]:
         effective_sort_key = cursor.sort_key if cursor is not None else sort_key
         column = _SORT_KEY_TO_POSTGRES_COLUMN[effective_sort_key]
 
@@ -77,7 +77,7 @@ class EventRepository:
 
         if has_next_page:
             last_event_id, last_column_value = kept_rows[-1]
-            next_cursor = EventCursorDTO(
+            next_cursor = EventDBCursorDTO(
                 sort_key=effective_sort_key,
                 sort_key_value=last_column_value,
                 id=last_event_id,

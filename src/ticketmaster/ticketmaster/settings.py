@@ -1,3 +1,4 @@
+from importlib.metadata import version
 from pathlib import Path
 from typing import ClassVar
 
@@ -39,5 +40,7 @@ class Settings(SentrySettingsMixin, LoggingSettingsMixin, PostgresSettingsMixin,
 
     cognito_audience: str
 
+    version: str
 
-settings = Settings()
+
+settings = Settings(version=version("ticketmaster"))

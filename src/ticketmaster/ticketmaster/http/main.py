@@ -1,6 +1,5 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from importlib.metadata import version
 
 from fastapi import FastAPI
 from libs.aws.session import bind_task_role_to_aws_session
@@ -36,7 +35,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         service_name=ServiceNameEnum.TICKETMASTER,
         process_type=ProcessTypeEnum.FASTAPI,
     )
-    setup_sentry(settings=settings, release=version("ticketmaster"))
+    setup_sentry(settings=settings, release=settings.version)
 
     engine = init_sqlmodel_engine(db_url=settings.postgres_db_url)
     Session.configure(bind=engine)
@@ -63,7 +62,7 @@ _is_sensitive = is_data_sensitive_env(environment=settings.environment)
 
 app = FastAPI(
     title="Ticketmaster",
-    version=version("ticketmaster"),
+    version=settings.version,
     description="Ticketmaster monolith service.",
     lifespan=lifespan,
     docs_url=None if _is_sensitive else "/docs",

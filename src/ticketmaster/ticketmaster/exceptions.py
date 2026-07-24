@@ -12,7 +12,3 @@ class UserNotFoundException(NotFoundException):
 
 class EventCacheDocumentNotFoundException(CacheDocumentNotFoundException):
     pass
-
-
-class CursorSortKeyMismatchException(Exception):
-    pass

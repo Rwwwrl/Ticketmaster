@@ -32,7 +32,7 @@ async def test_get_event_by_id_warms_cache_on_first_request(
 
     assert (
         await redis.exists(
-            EventCacheRepository._event_key_for_version(event_id=event.id, version=EventCacheDocument.version)
+            EventCacheRepository._cache_key(event_id=event.id, version=EventCacheDocument.version)
         )
         == 0
     )
@@ -43,7 +43,7 @@ async def test_get_event_by_id_warms_cache_on_first_request(
     assert EventResponseSchema(**response.json()).name == "Coldplay"
     assert (
         await redis.exists(
-            EventCacheRepository._event_key_for_version(event_id=event.id, version=EventCacheDocument.version)
+            EventCacheRepository._cache_key(event_id=event.id, version=EventCacheDocument.version)
         )
         == 1
     )
@@ -89,7 +89,7 @@ async def test_get_event_by_id_falls_through_to_db_when_cache_document_is_stale(
         mode="json", exclude={"price"}
     )
     await redis.set(
-        name=EventCacheRepository._event_key_for_version(event_id=event.id, version=EventCacheDocument.version),
+        name=EventCacheRepository._cache_key(event_id=event.id, version=EventCacheDocument.version),
         value=json.dumps(stale_payload),
     )
 
@@ -100,7 +100,7 @@ async def test_get_event_by_id_falls_through_to_db_when_cache_document_is_stale(
 
     rewarmed_document = EventCacheDocument.from_raw_cache(
         await redis.get(
-            name=EventCacheRepository._event_key_for_version(event_id=event.id, version=EventCacheDocument.version)
+            name=EventCacheRepository._cache_key(event_id=event.id, version=EventCacheDocument.version)
         )
     )
     assert rewarmed_document.id == event.id

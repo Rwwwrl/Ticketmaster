@@ -26,6 +26,7 @@ asyncio_default_fixture_loop_scope = "session"
 addopts = "--import-mode=importlib -p libs.tests_ext.sqlmodel_fixtures -p libs.tests_ext.redis_fixtures"
 env = [
     "ENVIRONMENT=cicd",
+    "SECRET=test-secret",
     "POSTGRES_DB_URL=postgresql+asyncpg://postgres:postgres@localhost:15432/postgres",
     "REDIS_URL=redis://localhost:16379/15",
     "AWS_REGION=eu-central-1",
