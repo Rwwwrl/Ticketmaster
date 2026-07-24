@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Git Branch"
+  short_description: "Create a branch from the task description"
+  default_prompt: "Use $git-branch to create a branch for this task."

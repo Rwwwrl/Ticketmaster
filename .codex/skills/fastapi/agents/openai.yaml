@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ticketmaster FastAPI"
+  short_description: "Apply Ticketmaster FastAPI conventions"
+  default_prompt: "Use $fastapi to implement this Ticketmaster HTTP API change."

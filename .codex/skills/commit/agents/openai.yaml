@@ -1,0 +1,4 @@
+interface:
+  display_name: "Commit Staged Changes"
+  short_description: "Commit only user-staged Ticketmaster changes"
+  default_prompt: "Use $commit to commit only the changes I have staged."
