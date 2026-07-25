@@ -13,12 +13,12 @@ from ticketmaster.schemas.dtos import BaseEventDTO
 
 class EventCacheRepository:
     @classmethod
-    def _cache_key(cls, event_id: int, version: int) -> str:
+    def _cache_key(cls, event_id: int, version: str) -> str:
         return f"event:v{version}:{event_id}"
 
     @classmethod
-    async def get_by_id(cls, redis: Redis, _id: int) -> BaseEventDTO:
-        raw = await redis.get(name=cls._cache_key(event_id=_id, version=EventCacheDocument.version))
+    async def get_by_id(cls, redis: Redis, _id: int, version: str) -> BaseEventDTO:
+        raw = await redis.get(name=cls._cache_key(event_id=_id, version=version))
         if raw is None:
             raise EventCacheDocumentNotFoundException(f"Event cache document not found for id={_id}")
 
@@ -26,20 +26,26 @@ class EventCacheRepository:
         return BaseEventDTO.from_cache_document(document=cache_document)
 
     @classmethod
-    async def set(cls, redis: Redis, dto: BaseEventDTO, ttl_seconds: int = consts.EVENT_CACHE_TTL_SECONDS) -> None:
+    async def set(
+        cls,
+        redis: Redis,
+        dto: BaseEventDTO,
+        version: str,
+        ttl_seconds: int = consts.EVENT_CACHE_TTL_SECONDS,
+    ) -> None:
         cache_document = EventCacheDocument.from_dto(dto=dto)
         await redis.set(
-            name=cls._cache_key(event_id=cache_document.id, version=EventCacheDocument.version),
+            name=cls._cache_key(event_id=cache_document.id, version=version),
             value=cache_document.model_dump_json(),
             ex=ttl_seconds,
         )
 
     @classmethod
-    async def get_many_by_ids(cls, redis: Redis, ids: list[int]) -> list[BaseEventDTO]:
+    async def get_many_by_ids(cls, redis: Redis, ids: list[int], version: str) -> list[BaseEventDTO]:
         if not ids:
             return []
 
-        keys = [cls._cache_key(event_id=event_id, version=EventCacheDocument.version) for event_id in ids]
+        keys = [cls._cache_key(event_id=event_id, version=version) for event_id in ids]
 
         raw_documents = await redis.mget(keys=keys)
 
@@ -62,6 +68,7 @@ class EventCacheRepository:
         cls,
         redis: Redis,
         dtos: list[BaseEventDTO],
+        version: str,
         ttl_seconds: int = consts.EVENT_CACHE_TTL_SECONDS,
     ) -> None:
         if not dtos:
@@ -71,7 +78,7 @@ class EventCacheRepository:
             for dto in dtos:
                 cache_document = EventCacheDocument.from_dto(dto=dto)
                 pipe.set(
-                    name=cls._cache_key(event_id=cache_document.id, version=EventCacheDocument.version),
+                    name=cls._cache_key(event_id=cache_document.id, version=version),
                     value=cache_document.model_dump_json(),
                     ex=ttl_seconds,
                 )

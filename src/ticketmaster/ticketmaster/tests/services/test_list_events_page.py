@@ -45,16 +45,12 @@ async def test_list_events_page_warms_cache_on_first_request(
     )
     await insert(event)
 
-    assert (
-        await redis.exists(EventCacheRepository._cache_key(event_id=event.id, version=EventCacheDocument.version)) == 0
-    )
+    assert await redis.exists(EventCacheRepository._cache_key(event_id=event.id, version=settings.version)) == 0
 
     response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
 
     assert response.status_code == 200
-    assert (
-        await redis.exists(EventCacheRepository._cache_key(event_id=event.id, version=EventCacheDocument.version)) == 1
-    )
+    assert await redis.exists(EventCacheRepository._cache_key(event_id=event.id, version=settings.version)) == 1
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -94,21 +90,17 @@ async def test_list_events_page_backfills_on_partial_cache_miss(
 
     cache_document = EventCacheDocument.from_dto(dto=BaseEventDTO.from_sqlmodel(model=first))
     await redis.set(
-        name=EventCacheRepository._cache_key(event_id=first.id, version=EventCacheDocument.version),
+        name=EventCacheRepository._cache_key(event_id=first.id, version=settings.version),
         value=cache_document.model_dump_json(),
     )
-    assert (
-        await redis.exists(EventCacheRepository._cache_key(event_id=second.id, version=EventCacheDocument.version)) == 0
-    )
+    assert await redis.exists(EventCacheRepository._cache_key(event_id=second.id, version=settings.version)) == 0
 
     response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
     page = EventsPageResponseSchema(**response.json())
 
     assert response.status_code == 200
     assert [item.id for item in page.items] == [first.id, second.id]
-    assert (
-        await redis.exists(EventCacheRepository._cache_key(event_id=second.id, version=EventCacheDocument.version)) == 1
-    )
+    assert await redis.exists(EventCacheRepository._cache_key(event_id=second.id, version=settings.version)) == 1
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -123,7 +115,7 @@ async def test_list_events_page_backfills_when_cache_document_is_stale(
         mode="json", exclude={"price"}
     )
     await redis.set(
-        name=EventCacheRepository._cache_key(event_id=event.id, version=EventCacheDocument.version),
+        name=EventCacheRepository._cache_key(event_id=event.id, version=settings.version),
         value=json.dumps(stale_payload),
     )
 
@@ -134,7 +126,7 @@ async def test_list_events_page_backfills_when_cache_document_is_stale(
     assert [item.id for item in page.items] == [event.id]
 
     rewarmed_document = EventCacheDocument.from_raw_cache(
-        await redis.get(name=EventCacheRepository._cache_key(event_id=event.id, version=EventCacheDocument.version))
+        await redis.get(name=EventCacheRepository._cache_key(event_id=event.id, version=settings.version))
     )
     assert rewarmed_document.id == event.id
 
@@ -148,19 +140,17 @@ async def test_list_events_page_ignores_other_version_cache_keys(
     await insert(event)
 
     cache_document = EventCacheDocument.from_dto(dto=BaseEventDTO.from_sqlmodel(model=event))
-    await redis.set(name=f"event:{event.id}", value=cache_document.model_dump_json())
-    assert (
-        await redis.exists(EventCacheRepository._cache_key(event_id=event.id, version=EventCacheDocument.version)) == 0
-    )
+    other_version_key = EventCacheRepository._cache_key(event_id=event.id, version="other-version")
+    await redis.set(name=other_version_key, value=cache_document.model_dump_json())
+    assert await redis.exists(EventCacheRepository._cache_key(event_id=event.id, version=settings.version)) == 0
 
     response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
     page = EventsPageResponseSchema(**response.json())
 
     assert response.status_code == 200
     assert [item.id for item in page.items] == [event.id]
-    assert (
-        await redis.exists(EventCacheRepository._cache_key(event_id=event.id, version=EventCacheDocument.version)) == 1
-    )
+    assert await redis.exists(EventCacheRepository._cache_key(event_id=event.id, version=settings.version)) == 1
+    assert await redis.exists(other_version_key) == 1
 
 
 @pytest.mark.asyncio(loop_scope="session")

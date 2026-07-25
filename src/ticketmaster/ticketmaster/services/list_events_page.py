@@ -26,7 +26,11 @@ async def _hydrate_events(session: AsyncSession, event_ids: list[int]) -> list[B
 
     cached_documents: list[BaseEventDTO] = []
     with suppress(RedisError):
-        cached_documents = await EventCacheRepository.get_many_by_ids(redis=redis_proxy.redis, ids=event_ids)
+        cached_documents = await EventCacheRepository.get_many_by_ids(
+            redis=redis_proxy.redis,
+            ids=event_ids,
+            version=settings.version,
+        )
 
     events_by_id: dict[int, BaseEventDTO] = {document.id: document for document in cached_documents}
     missing_ids: list[int] = [event_id for event_id in event_ids if event_id not in events_by_id]
@@ -34,7 +38,7 @@ async def _hydrate_events(session: AsyncSession, event_ids: list[int]) -> list[B
     if missing_ids:
         events = await EventRepository.get_many_by_ids(session=session, ids=missing_ids)
         with suppress(RedisError):
-            await EventCacheRepository.set_many(redis=redis_proxy.redis, dtos=events)
+            await EventCacheRepository.set_many(redis=redis_proxy.redis, dtos=events, version=settings.version)
 
         events_by_id.update({event.id: event for event in events})
 

@@ -14,6 +14,7 @@ from ticketmaster.models import Event
 from ticketmaster.redis_cache.cache_documents import EventCacheDocument
 from ticketmaster.redis_cache.repositories import EventCacheRepository
 from ticketmaster.schemas.dtos import BaseEventDTO
+from ticketmaster.settings import settings
 from ticketmaster.tests.factories import EventFactory
 
 
@@ -30,23 +31,13 @@ async def test_get_event_by_id_warms_cache_on_first_request(
     )
     await insert(event)
 
-    assert (
-        await redis.exists(
-            EventCacheRepository._cache_key(event_id=event.id, version=EventCacheDocument.version)
-        )
-        == 0
-    )
+    assert await redis.exists(EventCacheRepository._cache_key(event_id=event.id, version=settings.version)) == 0
 
     response = await async_client.get(url=f"/v1/events/{event.id}")
 
     assert response.status_code == 200
     assert EventResponseSchema(**response.json()).name == "Coldplay"
-    assert (
-        await redis.exists(
-            EventCacheRepository._cache_key(event_id=event.id, version=EventCacheDocument.version)
-        )
-        == 1
-    )
+    assert await redis.exists(EventCacheRepository._cache_key(event_id=event.id, version=settings.version)) == 1
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -89,7 +80,7 @@ async def test_get_event_by_id_falls_through_to_db_when_cache_document_is_stale(
         mode="json", exclude={"price"}
     )
     await redis.set(
-        name=EventCacheRepository._cache_key(event_id=event.id, version=EventCacheDocument.version),
+        name=EventCacheRepository._cache_key(event_id=event.id, version=settings.version),
         value=json.dumps(stale_payload),
     )
 
@@ -99,9 +90,7 @@ async def test_get_event_by_id_falls_through_to_db_when_cache_document_is_stale(
     assert EventResponseSchema(**response.json()).name == "Stale Cache Show"
 
     rewarmed_document = EventCacheDocument.from_raw_cache(
-        await redis.get(
-            name=EventCacheRepository._cache_key(event_id=event.id, version=EventCacheDocument.version)
-        )
+        await redis.get(name=EventCacheRepository._cache_key(event_id=event.id, version=settings.version))
     )
     assert rewarmed_document.id == event.id
 

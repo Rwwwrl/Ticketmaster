@@ -1,4 +1,4 @@
-from typing import ClassVar, Self
+from typing import Self
 
 from pydantic import BaseModel, ValidationError
 
@@ -7,11 +7,6 @@ from libs.redis_ext.cache.exceptions import FromRawCacheValidationError
 
 class BaseCacheDocument(BaseModel):
     """Base class for typed documents persisted in Redis."""
-
-    # NOTE @sosov: Cache keys must embed this version (e.g. "event:v1:<id>"). Bump it on every
-    # schema change so old- and new-format documents live under disjoint keys during rolling
-    # deploys; the previous generation expires via TTL.
-    version: ClassVar[int]
 
     @classmethod
     def from_raw_cache(cls, raw: str | bytes) -> Self:

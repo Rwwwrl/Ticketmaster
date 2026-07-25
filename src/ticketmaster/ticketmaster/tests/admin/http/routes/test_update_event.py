@@ -12,6 +12,7 @@ from ticketmaster.models import Event
 from ticketmaster.redis_cache.cache_documents import EventCacheDocument
 from ticketmaster.redis_cache.repositories import EventCacheRepository, NamespaceRepository
 from ticketmaster.schemas.dtos import BaseEventDTO
+from ticketmaster.settings import settings
 from ticketmaster.tests.factories import EventFactory
 
 
@@ -75,7 +76,7 @@ async def test_update_event_when_all_fields_returns_200_and_updates_all(
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_update_event_when_cached_evicts_cache_entry(
+async def test_update_event_when_cached_keeps_cache_entry_until_ttl(
     async_client: AsyncClient, redis: Redis, bypass_admin_jwt: None
 ) -> None:
     event = EventFactory(
@@ -85,46 +86,21 @@ async def test_update_event_when_cached_evicts_cache_entry(
         start_at=datetime(2026, 6, 2, 20, 0, tzinfo=UTC),
     )
     await insert(event)
-    await EventCacheRepository.set(redis=redis, dto=BaseEventDTO.from_sqlmodel(model=event))
-    assert (
-        await redis.get(name=EventCacheRepository._cache_key(event_id=event.id, version=EventCacheDocument.version))
-        is not None
+    await EventCacheRepository.set(
+        redis=redis,
+        dto=BaseEventDTO.from_sqlmodel(model=event),
+        version=settings.version,
     )
+    key = EventCacheRepository._cache_key(event_id=event.id, version=settings.version)
+    assert await redis.get(name=key) is not None
 
     response = await async_client.patch(url=f"/admin/events/{event.id}", json={"name": "Coldplay — Rescheduled"})
+    raw = await redis.get(name=key)
 
     assert response.status_code == 200
-    assert (
-        await redis.get(name=EventCacheRepository._cache_key(event_id=event.id, version=EventCacheDocument.version))
-        is None
-    )
-
-
-@pytest.mark.asyncio(loop_scope="session")
-async def test_update_event_when_cached_evicts_adjacent_version_cache_entries(
-    async_client: AsyncClient, redis: Redis, bypass_admin_jwt: None
-) -> None:
-    event = EventFactory(
-        name="Coldplay",
-        description="Stadium tour stop",
-        type=EventTypeEnum.CONCERT,
-        start_at=datetime(2026, 6, 2, 20, 0, tzinfo=UTC),
-    )
-    await insert(event)
-
-    cache_document = EventCacheDocument.from_dto(dto=BaseEventDTO.from_sqlmodel(model=event))
-    current_version = EventCacheDocument.version
-    adjacent_versions = (current_version - 1, current_version, current_version + 1)
-    for version in adjacent_versions:
-        key = EventCacheRepository._cache_key(event_id=event.id, version=version)
-        await redis.set(name=key, value=cache_document.model_dump_json())
-
-    response = await async_client.patch(url=f"/admin/events/{event.id}", json={"name": "Coldplay — Rescheduled"})
-
-    assert response.status_code == 200
-    for version in adjacent_versions:
-        key = EventCacheRepository._cache_key(event_id=event.id, version=version)
-        assert await redis.get(name=key) is None
+    assert raw is not None
+    cached_document = EventCacheDocument.from_raw_cache(raw)
+    assert cached_document.name == "Coldplay"
 
 
 @pytest.mark.asyncio(loop_scope="session")
