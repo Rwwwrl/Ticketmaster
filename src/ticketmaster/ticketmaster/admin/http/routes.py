@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from libs.sqlmodel_ext import Session
 
 from ticketmaster.admin import services
+from ticketmaster.admin.exceptions import EventHasTicketsException
 from ticketmaster.admin.http.dependencies import validate_admin_jwt
 from ticketmaster.admin.http.schemas import request_schemas
 from ticketmaster.exceptions import EventNotFoundException
@@ -53,3 +54,20 @@ async def update_event(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 
     return ToEventResponseSchemaSerializer.serialize(dto=dto)
+
+
+@admin_router.delete(
+    "/events/{event_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(validate_admin_jwt)],
+)
+async def delete_event(event_id: int) -> Response:
+    try:
+        async with Session() as session, session.begin():
+            await services.delete_event(session=session, event_id=event_id)
+    except EventNotFoundException:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    except EventHasTicketsException:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Event has tickets")
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
