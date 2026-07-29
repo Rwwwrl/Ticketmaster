@@ -29,7 +29,7 @@ function buildEventsUrl(q: string, cursor: string | null, sortBy: SortKey): stri
         }
         return url;
     }
-    const params = new URLSearchParams({ sort_key: sortBy });
+    const params = new URLSearchParams({ sort_key: sortBy, page_size: '50' });
     if (cursor) {
         params.set('cursor', cursor);
     }

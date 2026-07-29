@@ -1,4 +1,4 @@
-from enum import StrEnum, auto
+from enum import IntEnum, StrEnum, auto
 
 
 class EventTypeEnum(StrEnum):
@@ -22,3 +22,8 @@ class CurrencyEnum(StrEnum):
 class EventSortKeyEnum(StrEnum):
     START_AT = auto()
     PRICE = auto()
+
+
+class EventPageSizeEnum(IntEnum):
+    MOBILE = 20
+    WEB = 50

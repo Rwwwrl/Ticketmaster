@@ -17,6 +17,7 @@ class BaseAppSettings(BaseSettings):
     env_dev_yaml: ClassVar[Path]
 
     environment: EnvironmentEnum
+    secret: str
 
     @classmethod
     def settings_customise_sources(

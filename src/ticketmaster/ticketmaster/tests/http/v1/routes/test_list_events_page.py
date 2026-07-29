@@ -4,13 +4,17 @@ from decimal import Decimal
 import pytest
 from httpx import AsyncClient
 from libs.tests_ext.factories import insert
+from redis.asyncio import Redis
 from ticketmaster.enums import EventTypeEnum
 from ticketmaster.http.v1.schemas.response_schemas import EventsPageResponseSchema
+from ticketmaster.redis_cache.repositories import NamespaceRepository
 from ticketmaster.tests.factories import EventFactory
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_list_events_page_when_no_events_in_db(async_client: AsyncClient) -> None:
+async def test_list_events_page_when_no_events_in_db(async_client: AsyncClient, redis: Redis) -> None:
+    await NamespaceRepository.set(redis=redis)
+
     response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
 
     assert response.status_code == 200
@@ -20,7 +24,10 @@ async def test_list_events_page_when_no_events_in_db(async_client: AsyncClient) 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_list_events_page_when_events_exist_sorted_by_start_at_then_id(
     async_client: AsyncClient,
+    redis: Redis,
 ) -> None:
+    await NamespaceRepository.set(redis=redis)
+
     later = EventFactory(
         name="Coldplay",
         description="Stadium tour stop",
@@ -45,42 +52,32 @@ async def test_list_events_page_when_events_exist_sorted_by_start_at_then_id(
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_list_events_page_when_cursor_has_more_pages(async_client: AsyncClient) -> None:
-    first = EventFactory(start_at=datetime(2026, 5, 1, tzinfo=UTC))
-    second = EventFactory(start_at=datetime(2026, 5, 2, tzinfo=UTC))
-    third = EventFactory(start_at=datetime(2026, 5, 3, tzinfo=UTC))
-    await insert(first, second, third)
+async def test_list_events_page_when_cursor_has_more_pages(async_client: AsyncClient, redis: Redis) -> None:
+    await NamespaceRepository.set(redis=redis)
 
-    first_response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at", "page_size": 1})
+    events = [EventFactory(start_at=datetime(2026, 5, day, tzinfo=UTC)) for day in range(1, 22)]
+    await insert(*events)
+
+    first_response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at", "page_size": 20})
     first_page = EventsPageResponseSchema(**first_response.json())
 
     second_response = await async_client.get(
         url="/v1/events/",
-        params={"sort_key": "start_at", "cursor": first_page.next_cursor, "page_size": 1},
+        params={"sort_key": "start_at", "cursor": first_page.next_cursor, "page_size": 50},
     )
     second_page = EventsPageResponseSchema(**second_response.json())
 
-    third_response = await async_client.get(
-        url="/v1/events/",
-        params={"sort_key": "start_at", "cursor": second_page.next_cursor, "page_size": 1},
-    )
-    third_page = EventsPageResponseSchema(**third_response.json())
-
-    assert [first_response.status_code, second_response.status_code, third_response.status_code] == [200, 200, 200]
+    assert [first_response.status_code, second_response.status_code] == [200, 200]
     assert first_page.next_cursor is not None
-    assert second_page.next_cursor is not None
-    assert third_page.next_cursor is None
-    assert [first_page.items[0].id, second_page.items[0].id, third_page.items[0].id] == [
-        first.id,
-        second.id,
-        third.id,
-    ]
+    assert second_page.next_cursor is None
+    assert [item.id for item in first_page.items] == [event.id for event in events[:20]]
+    assert [item.id for item in second_page.items] == [events[20].id]
 
 
 @pytest.mark.asyncio(loop_scope="session")
 @pytest.mark.parametrize(
     "params",
-    [{"page_size": 0}, {"page_size": 101}],
+    [{"page_size": 0}, {"page_size": 10}, {"page_size": 21}, {"page_size": 49}, {"page_size": 51}],
 )
 async def test_list_events_page_when_params_invalid(
     async_client: AsyncClient,
@@ -105,7 +102,9 @@ async def test_list_events_page_when_cursor_is_invalid(async_client: AsyncClient
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_list_events_page_when_sorted_by_price(async_client: AsyncClient) -> None:
+async def test_list_events_page_when_sorted_by_price(async_client: AsyncClient, redis: Redis) -> None:
+    await NamespaceRepository.set(redis=redis)
+
     cheap = EventFactory(start_at=datetime(2026, 6, 1, tzinfo=UTC), price=Decimal("15.00"))
     mid = EventFactory(start_at=datetime(2026, 5, 1, tzinfo=UTC), price=Decimal("42.50"))
     pricey = EventFactory(start_at=datetime(2026, 4, 1, tzinfo=UTC), price=Decimal("99.00"))
@@ -120,33 +119,65 @@ async def test_list_events_page_when_sorted_by_price(async_client: AsyncClient) 
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_list_events_page_when_price_cursor_has_more_pages(async_client: AsyncClient) -> None:
-    first = EventFactory(price=Decimal("5.00"))
-    second = EventFactory(price=Decimal("10.00"))
-    third = EventFactory(price=Decimal("20.00"))
-    await insert(third, first, second)
+async def test_list_events_page_when_price_cursor_has_more_pages(async_client: AsyncClient, redis: Redis) -> None:
+    await NamespaceRepository.set(redis=redis)
 
-    first_response = await async_client.get(url="/v1/events/", params={"sort_key": "price", "page_size": 1})
+    events = [EventFactory(price=Decimal(index)) for index in range(1, 22)]
+    await insert(*reversed(events))
+
+    first_response = await async_client.get(url="/v1/events/", params={"sort_key": "price", "page_size": 20})
     first_page = EventsPageResponseSchema(**first_response.json())
 
     second_response = await async_client.get(
         url="/v1/events/",
-        params={"sort_key": "price", "cursor": first_page.next_cursor, "page_size": 1},
+        params={"sort_key": "price", "cursor": first_page.next_cursor, "page_size": 20},
     )
     second_page = EventsPageResponseSchema(**second_response.json())
 
-    third_response = await async_client.get(
-        url="/v1/events/",
-        params={"sort_key": "price", "cursor": second_page.next_cursor, "page_size": 1},
-    )
-    third_page = EventsPageResponseSchema(**third_response.json())
-
-    assert [first_response.status_code, second_response.status_code, third_response.status_code] == [200, 200, 200]
+    assert [first_response.status_code, second_response.status_code] == [200, 200]
     assert first_page.next_cursor is not None
-    assert second_page.next_cursor is not None
-    assert third_page.next_cursor is None
-    assert [first_page.items[0].id, second_page.items[0].id, third_page.items[0].id] == [
-        first.id,
-        second.id,
-        third.id,
-    ]
+    assert second_page.next_cursor is None
+    assert [item.id for item in first_page.items] == [event.id for event in events[:20]]
+    assert [item.id for item in second_page.items] == [events[20].id]
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_list_events_page_when_cursor_sort_key_mismatches_returns_400(
+    async_client: AsyncClient,
+    redis: Redis,
+) -> None:
+    await NamespaceRepository.set(redis=redis)
+
+    events = [EventFactory(start_at=datetime(2026, 5, day, tzinfo=UTC)) for day in range(1, 22)]
+    await insert(*events)
+    first_response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
+    first_page = EventsPageResponseSchema(**first_response.json())
+
+    response = await async_client.get(
+        url="/v1/events/",
+        params={"sort_key": "price", "cursor": first_page.next_cursor},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Cursor does not match sort_key"}
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_list_events_page_when_cursor_is_tampered_returns_422(
+    async_client: AsyncClient,
+    redis: Redis,
+) -> None:
+    await NamespaceRepository.set(redis=redis)
+
+    events = [EventFactory(start_at=datetime(2026, 5, day, tzinfo=UTC)) for day in range(1, 22)]
+    await insert(*events)
+    first_response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
+    first_page = EventsPageResponseSchema(**first_response.json())
+    assert first_page.next_cursor is not None
+
+    response = await async_client.get(
+        url="/v1/events/",
+        params={"sort_key": "start_at", "cursor": f"{first_page.next_cursor[:-2]}aa"},
+    )
+
+    assert response.status_code == 422

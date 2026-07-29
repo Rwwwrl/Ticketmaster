@@ -1,75 +1,50 @@
-import base64
-import binascii
-import json
 from datetime import datetime
 from decimal import Decimal
-from typing import Self
+from typing import Any
 
-from libs.common.schemas.dto import DTO
+from libs.common.schemas.base_db_cursor import BaseDBCursorDTO
+from libs.common.schemas.base_service_cursor import BaseServiceCursorBodyDTO, BaseServiceCursorDTO
+from libs.pydantic_ext.type_adapters import DATETIME_ADAPTER, DECIMAL_ADAPTER
+from pydantic import model_validator
 
 from ticketmaster.enums import EventSortKeyEnum
 
 
-class EventCursorDTO(DTO):
+class EventDBCursorDTO(BaseDBCursorDTO):
     sort_key: EventSortKeyEnum
-    sort_key_value: str | Decimal | datetime
+    sort_key_value: Decimal | datetime
     id: int
 
-    def _base64_encode(self) -> str:
-        raw = json.dumps(
-            obj={"sort_key": self.sort_key, "sort_key_value": self.sort_key_value, "_id": self.id}
-        ).encode()
-        return base64.urlsafe_b64encode(s=raw).decode()
 
-    @classmethod
-    def _base64_decode(cls, cursor: str) -> Self:
-        try:
-            raw = base64.b64decode(s=cursor.encode(), altchars=b"-_", validate=True)
-            payload = json.loads(raw)
-            return cls(
-                sort_key=payload["sort_key"],
-                sort_key_value=str(payload["sort_key_value"]),
-                id=int(payload["_id"]),
-            )
-        except binascii.Error, KeyError, TypeError, ValueError:
-            raise ValueError("Invalid event cursor")
+class EventCursorBodyDTO(BaseServiceCursorBodyDTO):
+    sort_key: EventSortKeyEnum
+    sort_key_value: Decimal | datetime
+    id: int
+    page_index: int
 
+    @model_validator(mode="before")
     @classmethod
-    def _deserialize(cls, cursor: Self) -> Self:
-        match cursor.sort_key:
+    def _deserialize_sort_key_value(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        if "sort_key" not in data or "sort_key_value" not in data:
+            return data
+
+        sort_key = EventSortKeyEnum(data["sort_key"])
+        sort_key_value = data["sort_key_value"]
+
+        match sort_key:
             case EventSortKeyEnum.START_AT:
-                sort_key_value = datetime.fromisoformat(cursor.sort_key_value)
+                sort_key_value = DATETIME_ADAPTER.validate_python(sort_key_value)
             case EventSortKeyEnum.PRICE:
-                sort_key_value = Decimal(cursor.sort_key_value)
-            case _:
-                raise ValueError(f"Unexpected cursor.sort_key, got {cursor.sort_key}")
+                sort_key_value = DECIMAL_ADAPTER.validate_python(sort_key_value)
 
-        return cls(
-            id=cursor.id,
-            sort_key=cursor.sort_key,
-            sort_key_value=sort_key_value,
-        )
+        return {
+            **data,
+            "sort_key": sort_key,
+            "sort_key_value": sort_key_value,
+        }
 
-    def _serialize(self) -> Self:
-        match self.sort_key:
-            case EventSortKeyEnum.START_AT:
-                sort_key_value = self.sort_key_value.isoformat()
-            case EventSortKeyEnum.PRICE:
-                sort_key_value = str(self.sort_key_value)
-            case _:
-                raise ValueError(f"Unexpected cursor.sort_key, got {self.sort_key}")
 
-        return EventCursorDTO(
-            id=self.id,
-            sort_key=self.sort_key,
-            sort_key_value=sort_key_value,
-        )
-
-    @classmethod
-    def decode(cls, cursor: str) -> Self:
-        base64_decoded = cls._base64_decode(cursor=cursor)
-        return cls._deserialize(cursor=base64_decoded)
-
-    def encode(self) -> str:
-        serialized = self._serialize()
-        return serialized._base64_encode()
+class EventCursorDTO(BaseServiceCursorDTO):
+    body: EventCursorBodyDTO

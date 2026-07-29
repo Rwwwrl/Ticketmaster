@@ -7,8 +7,8 @@ from sqlalchemy.exc import IntegrityError
 
 from ticketmaster import consts, services
 from ticketmaster.cursors import EventCursorDTO
-from ticketmaster.enums import EventSortKeyEnum
-from ticketmaster.exceptions import CursorSortKeyMismatchException, EventNotFoundException
+from ticketmaster.enums import EventPageSizeEnum, EventSortKeyEnum
+from ticketmaster.exceptions import EventNotFoundException
 from ticketmaster.http.v1.dependencies import (
     decode_event_cursor,
     decode_event_search_cursor,
@@ -83,23 +83,20 @@ async def delete_me(
 async def list_events_page(
     sort_key: Annotated[EventSortKeyEnum, Query()],
     cursor: Annotated[EventCursorDTO | None, Depends(decode_event_cursor)],
-    page_size: Annotated[int, Query(ge=1, le=100)] = 20,
+    page_size: Annotated[EventPageSizeEnum, Query()] = EventPageSizeEnum.MOBILE,
 ) -> response_schemas.EventsPageResponseSchema:
-    try:
-        async with Session() as session, session.begin():
-            items, next_cursor_pair = await services.list_events_page(
-                session=session,
-                sort_key=sort_key,
-                cursor=cursor,
-                page_size=page_size,
-            )
-    except CursorSortKeyMismatchException:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cursor does not match sort_key")
+    async with Session() as session, session.begin():
+        items, next_cursor = await services.list_events_page(
+            session=session,
+            sort_key=sort_key,
+            cursor=cursor,
+            page_size=int(page_size),
+        )
 
     return response_schemas.EventsPageResponseSchema(
         items=[ToEventResponseSchemaSerializer.serialize(dto=dto) for dto in items],
-        page_size=page_size,
-        next_cursor=next_cursor_pair.encode() if next_cursor_pair is not None else None,
+        page_size=int(page_size),
+        next_cursor=next_cursor,
     )
 
 

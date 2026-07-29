@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ticketmaster Testing"
+  short_description: "Write reliable pytest tests for Ticketmaster"
+  default_prompt: "Use $testing to add focused pytest coverage for this change."

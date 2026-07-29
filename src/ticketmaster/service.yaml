@@ -78,6 +78,8 @@ Resources:
             ValueFrom: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:ticketmaster/ticketmaster/${Environment}/POSTGRES_DB_URL'
           - Name: REDIS_URL
             ValueFrom: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:ticketmaster/ticketmaster/${Environment}/REDIS_URL'
+          - Name: SECRET
+            ValueFrom: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:ticketmaster/ticketmaster/${Environment}/SECRET'
           - Name: SENTRY_DSN
             ValueFrom: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:ticketmaster/ticketmaster/${Environment}/SENTRY_DSN'
           - Name: JWT_AUDIENCE
