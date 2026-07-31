@@ -18,14 +18,14 @@ Lambda handler entrypoint: `cognito_pre_signup.handler.lambda_handler`.
 
 ## Required env vars
 
-| Var | Source |
-| --- | --- |
-| `TICKETMASTER_API_URL` | Set by `lambda.yaml` from the ticketmaster service stack's `ServiceUrl` output. |
-| `AWS_REGION` | Auto-injected by the Lambda runtime. |
-| `JWT_KMS_KEY_ARN` | Set by `lambda.yaml` via SSM `/ticketmaster/ticketmaster/<env>/LAMBDA_JWT_KMS_KEY_ARN`. |
-| `JWT_AUDIENCE` | Set by `lambda.yaml` via SSM `/ticketmaster/ticketmaster/<env>/LAMBDA_JWT_AUDIENCE`. Must match backend. |
-| `JWT_ISSUER` | Set by `lambda.yaml` via SSM `/ticketmaster/ticketmaster/<env>/LAMBDA_JWT_ISSUER`. Must match backend. |
-| `LAMBDA_ROLE_ARN` | Set by `lambda.yaml` via `!GetAtt ExecutionRole.Arn`. Used as JWT `sub` for audit. |
+| Var                    | Source                                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| `TICKETMASTER_API_URL` | Set by `lambda.yaml` from the ticketmaster service stack's `ServiceUrl` output.                        |
+| `AWS_REGION`           | Auto-injected by the Lambda runtime.                                                                   |
+| `JWT_KMS_KEY_ARN`      | Set by `lambda.yaml` via SSM `/ticketmaster/ticketmaster/<env>/LAMBDA_JWT_KMS_KEY_ARN`.                |
+| `JWT_AUDIENCE`         | Set by `lambda.yaml` via SSM `/ticketmaster/ticketmaster/<env>/JWT_AUDIENCE`. Must match backend.      |
+| `JWT_ISSUER`           | Set by `lambda.yaml` via SSM `/ticketmaster/ticketmaster/<env>/LAMBDA_JWT_ISSUER`. Must match backend. |
+| `LAMBDA_ROLE_ARN`      | Set by `lambda.yaml` via `!GetAtt ExecutionRole.Arn`. Used as JWT `sub` for audit.                     |
 
 ## Provisioning model
 
@@ -34,7 +34,7 @@ Three layers, each owned by a different thing:
 - **Manual, one-off per env** — not in this repo, done in the AWS Console:
   - Create the KMS asymmetric key (`RSA_2048`, key usage `SIGN_VERIFY`, region `eu-central-1`); grant `kms:GetPublicKey` to the ticketmaster ECS task role via the key policy.
   - Write its ARN to SSM at `/ticketmaster/ticketmaster/<env>/LAMBDA_JWT_KMS_KEY_ARN`.
-  - Write the SSM params `/ticketmaster/ticketmaster/<env>/LAMBDA_JWT_AUDIENCE` and `LAMBDA_JWT_ISSUER`. These are shared with `service.yaml`.
+  - Write the SSM params `/ticketmaster/ticketmaster/<env>/JWT_AUDIENCE` and `LAMBDA_JWT_ISSUER`. These are shared with `service.yaml`.
   - Wire this Lambda as the PreSignUp trigger on the Cognito User Pool.
 
 - **Managed by `lambda.yaml` (CloudFormation)** — deployed from CI:
