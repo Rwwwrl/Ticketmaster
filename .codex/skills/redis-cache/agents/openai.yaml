@@ -1,4 +1,0 @@
-interface:
-  display_name: "Ticketmaster Redis Cache"
-  short_description: "Build safe versioned Redis caches"
-  default_prompt: "Use $redis-cache to implement this Ticketmaster caching change."

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Ticketmaster Deployment"
-  short_description: "Change and verify AWS deployment workflows"
-  default_prompt: "Use $deployment to implement this Ticketmaster deployment change."

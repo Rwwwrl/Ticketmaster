@@ -1,4 +1,0 @@
-interface:
-  display_name: "Ticketmaster SQLModel"
-  short_description: "Apply SQLModel-first database conventions"
-  default_prompt: "Use $sqlmodel to implement this Ticketmaster database change."
