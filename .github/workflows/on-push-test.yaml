@@ -49,3 +49,9 @@ jobs:
       service_path: frontend
       run_migrations: false
     secrets: inherit
+
+  update-helm-chart:
+    uses: ./.github/workflows/called-deploy-helm-update.yaml
+    with:
+      environment: test-eu
+    secrets: inherit

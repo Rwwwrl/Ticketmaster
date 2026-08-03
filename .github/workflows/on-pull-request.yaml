@@ -19,7 +19,7 @@ jobs:
         run: |
           git fetch origin ${{ github.base_ref }} --depth=1
 
-          packages="libs ticketmaster"
+          packages="libs ticketmaster hello_world"
           for pkg in $packages; do
             if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^src/${pkg}/"; then
               if ! git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "^src/${pkg}/pyproject.toml$"; then

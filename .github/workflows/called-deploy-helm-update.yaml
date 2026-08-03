@@ -1,0 +1,77 @@
+name: Update Helm Chart on EKS
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+
+jobs:
+  build-images:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.DEPLOYER_TO_AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push images
+        env:
+          REGISTRY: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
+        run: |
+          images=(
+            "hello-world:src/hello_world"
+          )
+
+          for entry in "${images[@]}"; do
+            image_name="${entry%%:*}"
+            context="${entry#*:}"
+            image=$REGISTRY/$image_name:${{ github.sha }}
+            docker build -t "$image" "$context"
+            docker push "$image"
+          done
+
+  update-chart:
+    needs: [build-images]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.DEPLOYER_TO_AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.4
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig \
+            --name ${{ vars.EKS_CLUSTER_NAME }} \
+            --region ${{ vars.AWS_REGION }}
+
+      - name: Helm upgrade
+        run: |
+          helm upgrade --install ticketmaster ./deploy/ticketmaster \
+            -f ./deploy/ticketmaster/values.test.yaml \
+            --set helloWorld.image.tag=${{ github.sha }} \
+            --wait \
+            --timeout 5m

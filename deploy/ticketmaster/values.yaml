@@ -1,0 +1,5 @@
+helloWorld:
+  replicas: 1
+  image:
+    repository: hello-world
+    tag: latest
