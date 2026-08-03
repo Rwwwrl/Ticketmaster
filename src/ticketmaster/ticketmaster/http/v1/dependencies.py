@@ -13,7 +13,7 @@ from libs.sqlmodel_ext import Session
 from ticketmaster.cursors import EventCursorDTO
 from ticketmaster.enums import EventSortKeyEnum
 from ticketmaster.exceptions import UserNotFoundException
-from ticketmaster.repositories import EventSearchCursorDTO, UserRepository
+from ticketmaster.repositories import UserRepository
 from ticketmaster.schemas.dtos import BaseUserDTO
 from ticketmaster.settings import settings
 
@@ -38,15 +38,6 @@ def decode_event_cursor(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cursor does not match sort_key")
 
     return decoded_cursor
-
-
-def decode_event_search_cursor(cursor: str | None) -> EventSearchCursorDTO | None:
-    if cursor is None:
-        return None
-    try:
-        return EventSearchCursorDTO.decode(cursor=cursor)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Invalid cursor")
 
 
 _JWT_ALGORITHM = "PS256"

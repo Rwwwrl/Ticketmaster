@@ -1,11 +1,6 @@
-import base64
-import binascii
-import json
 from datetime import datetime, timedelta
-from typing import Self
 from uuid import UUID
 
-from libs.common.schemas.dto import DTO
 from libs.datetime_ext.utils import utc_now
 from sqlalchemy import and_, delete, func, or_, tuple_, update
 from sqlalchemy.orm.attributes import InstrumentedAttribute
@@ -22,24 +17,6 @@ _SORT_KEY_TO_POSTGRES_COLUMN: dict[EventSortKeyEnum, InstrumentedAttribute] = {
     EventSortKeyEnum.START_AT: Event.start_at,
     EventSortKeyEnum.PRICE: Event.price,
 }
-
-
-class EventSearchCursorDTO(DTO):
-    rank: float
-    id: int
-
-    def encode(self) -> str:
-        raw = json.dumps(obj={"rank": self.rank, "_id": self.id}).encode()
-        return base64.urlsafe_b64encode(s=raw).decode()
-
-    @classmethod
-    def decode(cls, cursor: str) -> Self:
-        try:
-            raw = base64.b64decode(s=cursor.encode(), altchars=b"-_", validate=True)
-            payload = json.loads(raw)
-            return cls(rank=float(payload["rank"]), id=int(payload["_id"]))
-        except binascii.Error, KeyError, TypeError, ValueError:
-            raise ValueError("Invalid event search cursor")
 
 
 class EventRepository:
@@ -100,9 +77,9 @@ class EventRepository:
         cls,
         session: AsyncSession,
         q: str,
-        cursor: EventSearchCursorDTO | None,
+        cursor: EventDBCursorDTO | None,
         page_size: int,
-    ) -> tuple[list[BaseEventDTO], EventSearchCursorDTO | None]:
+    ) -> tuple[list[BaseEventDTO], EventDBCursorDTO | None]:
         tsquery = func.websearch_to_tsquery("english", q)
         rank_expr = func.ts_rank(Event.search_vector, tsquery)
 
@@ -115,8 +92,8 @@ class EventRepository:
         if cursor is not None:
             statement = statement.where(
                 or_(
-                    rank_expr < cursor.rank,
-                    and_(rank_expr == cursor.rank, Event.id > cursor.id),
+                    rank_expr < cursor.sort_key_value,
+                    and_(rank_expr == cursor.sort_key_value, Event.id > cursor.id),
                 )
             )
 
@@ -126,7 +103,11 @@ class EventRepository:
         items = [BaseEventDTO.from_sqlmodel(model=event) for event, _rank in kept_rows]
         if has_next_page:
             last_event, last_rank = kept_rows[-1]
-            next_cursor = EventSearchCursorDTO(rank=last_rank, id=last_event.id)
+            next_cursor = EventDBCursorDTO(
+                sort_key=EventSortKeyEnum.RANK,
+                sort_key_value=last_rank,
+                id=last_event.id,
+            )
         else:
             next_cursor = None
         return items, next_cursor

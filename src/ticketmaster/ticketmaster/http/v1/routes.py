@@ -11,12 +11,11 @@ from ticketmaster.enums import EventPageSizeEnum, EventSortKeyEnum
 from ticketmaster.exceptions import EventNotFoundException
 from ticketmaster.http.v1.dependencies import (
     decode_event_cursor,
-    decode_event_search_cursor,
     validate_lambda_jwt,
     validate_user_jwt,
 )
 from ticketmaster.http.v1.schemas import request_schemas, response_schemas
-from ticketmaster.repositories import EventRepository, TicketRepository, UserRepository
+from ticketmaster.repositories import TicketRepository, UserRepository
 from ticketmaster.schemas.dtos import BaseUserDTO
 from ticketmaster.serializers import (
     ToEventResponseSchemaSerializer,
@@ -85,13 +84,16 @@ async def list_events_page(
     cursor: Annotated[EventCursorDTO | None, Depends(decode_event_cursor)],
     page_size: Annotated[EventPageSizeEnum, Query()] = EventPageSizeEnum.MOBILE,
 ) -> response_schemas.EventsPageResponseSchema:
-    async with Session() as session, session.begin():
-        items, next_cursor = await services.list_events_page(
-            session=session,
-            sort_key=sort_key,
-            cursor=cursor,
-            page_size=int(page_size),
-        )
+    try:
+        async with Session() as session, session.begin():
+            items, next_cursor = await services.list_events_page(
+                session=session,
+                sort_key=sort_key,
+                cursor=cursor,
+                page_size=int(page_size),
+            )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     return response_schemas.EventsPageResponseSchema(
         items=[ToEventResponseSchemaSerializer.serialize(dto=dto) for dto in items],
@@ -107,23 +109,21 @@ async def list_events_page(
 )
 async def search_events(
     q: Annotated[str, Query(min_length=1, max_length=200)],
-    cursor: Annotated[str | None, Query()] = None,
+    cursor: Annotated[EventCursorDTO | None, Depends(decode_event_cursor)],
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> response_schemas.EventsPageResponseSchema:
-    decoded_cursor = decode_event_search_cursor(cursor=cursor)
-
     async with Session() as session, session.begin():
-        items, next_cursor_pair = await EventRepository.search_after_cursor(
+        items, next_cursor = await services.search_events(
             session=session,
             q=q,
-            cursor=decoded_cursor,
+            cursor=cursor,
             page_size=page_size,
         )
 
     return response_schemas.EventsPageResponseSchema(
         items=[ToEventResponseSchemaSerializer.serialize(dto=dto) for dto in items],
         page_size=page_size,
-        next_cursor=next_cursor_pair.encode() if next_cursor_pair is not None else None,
+        next_cursor=next_cursor,
     )
 
 

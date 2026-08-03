@@ -2,7 +2,7 @@ import { type FormEventHandler, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { parseDetail, publicApiFetch } from './api';
 
-type SortKey = 'start_at' | 'price';
+type SortKey = 'start_at' | 'price' | 'rank';
 
 interface EventItem {
     id: number;
@@ -22,12 +22,12 @@ interface EventsPageResponse {
 
 function buildEventsUrl(q: string, cursor: string | null, sortBy: SortKey): string {
     if (q) {
-        // NOTE: search is rank-ordered, so sort_key does not apply here.
-        let url = `/api/v1/events/search?q=${encodeURIComponent(q)}`;
+        // NOTE: search is always rank-ordered via sort_key=rank.
+        const params = new URLSearchParams({ q, sort_key: 'rank' });
         if (cursor) {
-            url += `&cursor=${encodeURIComponent(cursor)}`;
+            params.set('cursor', cursor);
         }
-        return url;
+        return `/api/v1/events/search?${params.toString()}`;
     }
     const params = new URLSearchParams({ sort_key: sortBy, page_size: '50' });
     if (cursor) {

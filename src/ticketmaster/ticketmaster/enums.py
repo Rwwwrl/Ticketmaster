@@ -22,6 +22,7 @@ class CurrencyEnum(StrEnum):
 class EventSortKeyEnum(StrEnum):
     START_AT = auto()
     PRICE = auto()
+    RANK = auto()
 
 
 class EventPageSizeEnum(IntEnum):

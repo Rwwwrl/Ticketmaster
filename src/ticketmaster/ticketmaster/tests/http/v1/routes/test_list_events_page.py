@@ -95,6 +95,14 @@ async def test_list_events_page_when_sort_key_is_missing(async_client: AsyncClie
 
 
 @pytest.mark.asyncio(loop_scope="session")
+async def test_list_events_page_when_sort_key_is_rank(async_client: AsyncClient) -> None:
+    response = await async_client.get(url="/v1/events/", params={"sort_key": "rank"})
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "sort_key=rank is not supported for list events"}
+
+
+@pytest.mark.asyncio(loop_scope="session")
 async def test_list_events_page_when_cursor_is_invalid(async_client: AsyncClient) -> None:
     response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at", "cursor": "not-a-cursor"})
 
