@@ -60,6 +60,27 @@ jobs:
       - name: Lint CloudFormation templates
         run: cfn-lint src/*/service.yaml src/*/migration.yaml frontend/service.yaml
 
+  validate_manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.4
+
+      - uses: bmuschko/setup-kubeconform@v1
+
+      - name: Validate manifests
+        run: |
+          helm template ticketmaster ./deploy/ticketmaster \
+            -f ./deploy/ticketmaster/values.yaml \
+            | kubeconform \
+              -strict \
+              -summary \
+              -schema-location default \
+              -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+
   lint_and_test:
     runs-on: ubuntu-latest
 
