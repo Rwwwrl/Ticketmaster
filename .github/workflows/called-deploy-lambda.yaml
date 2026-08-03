@@ -31,8 +31,8 @@ jobs:
         with:
           python-version: "3.14"
 
-      - name: Install Poetry 1.8.3
-        run: pipx install poetry==1.8.3
+      - name: Install Poetry 2.4.1
+        run: pipx install poetry==2.4.1
 
       - uses: aws-actions/configure-aws-credentials@v6
         with:
