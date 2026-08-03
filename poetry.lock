@@ -3350,7 +3350,7 @@ test = ["pytest", "tornado (>=4.5)", "typeguard"]
 
 [[package]]
 name = "ticketmaster"
-version = "0.16.1"
+version = "0.16.2"
 description = "Ticketmaster monolith service"
 optional = false
 python-versions = "^3.14"

@@ -22,8 +22,7 @@ interface EventsPageResponse {
 
 function buildEventsUrl(q: string, cursor: string | null, sortBy: SortKey): string {
     if (q) {
-        // NOTE: search is always rank-ordered via sort_key=rank.
-        const params = new URLSearchParams({ q, sort_key: 'rank' });
+        const params = new URLSearchParams({ q });
         if (cursor) {
             params.set('cursor', cursor);
         }

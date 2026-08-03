@@ -54,6 +54,9 @@ async def list_events_page(
     if sort_key == EventSortKeyEnum.RANK:
         raise ValueError("sort_key=rank is not supported for list events")
 
+    if cursor is not None and cursor.body.sort_key != sort_key:
+        raise ValueError("Cursor does not match sort_key")
+
     page_index = cursor.body.page_index if cursor is not None else 0
     service_name = list_events_page.__name__
 

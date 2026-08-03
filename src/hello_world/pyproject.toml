@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hello-world"
-version = "0.1.0"
+version = "0.1.1"
 description = "Hello-world FastAPI canary for EKS migration"
 authors = ["Aleksei Sosov <forgithublesh@yandex.ru>"]
 packages = [{ include = "hello_world" }]
@@ -9,6 +9,7 @@ packages = [{ include = "hello_world" }]
 python = "^3.14"
 fastapi = {extras = ["standard"], version = "^0.136.0"}
 uvicorn = "^0.44.0"
+ticketmaster-libs = {path = "../libs", develop = true}
 
 [build-system]
 requires = ["poetry-core"]

@@ -11,4 +11,3 @@ COPY hello_world/ ./hello_world/
 RUN poetry install --only main
 
 EXPOSE 8080
-CMD ["poetry", "run", "fastapi", "run", "hello_world/main.py", "--port", "8080", "--host", "0.0.0.0"]

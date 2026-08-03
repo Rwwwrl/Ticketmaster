@@ -197,3 +197,4 @@ obsidian-scripts/
 **/env.dev.yaml
 docs
 frontend/public/config.js
+.cursor/settings.json

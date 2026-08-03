@@ -6,6 +6,8 @@ metadata:
     app: hello-world
 spec:
   replicas: {{ .Values.helloWorld.replicas }}
+  strategy:
+    type: RollingUpdate
   selector:
     matchLabels:
       app: hello-world
@@ -14,13 +16,37 @@ spec:
       labels:
         app: hello-world
     spec:
+      terminationGracePeriodSeconds: 90
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: hello-world
       containers:
         - name: hello-world
           image: "{{ .Values.helloWorld.image.repository }}:{{ .Values.helloWorld.image.tag }}"
+          command: ["poetry", "run", "uvicorn"]
+          args:
+            - "hello_world.main:app"
+            - "--host"
+            - "0.0.0.0"
+            - "--port"
+            - "8080"
+            - "--timeout-keep-alive"
+            - "75"
           ports:
             - name: http
               containerPort: 8080
               protocol: TCP
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
           livenessProbe:
             httpGet:
               path: /health-check
