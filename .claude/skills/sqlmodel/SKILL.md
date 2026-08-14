@@ -83,7 +83,7 @@ Use the corresponding `contract@head` and contract directory for contract change
 
 Review the generated operations manually. Metadata-based tests do not prove the migration works. Keep `ticketmaster.models` imported in `migrations/env.py`. Existing downgrades are intentionally no-op; do not invent a destructive rollback without an explicit project decision.
 
-Production applies `expand@head` before the ECS rollout and `contract@head` only after the new service is healthy. Preserve that order and design migrations for mixed old/new pods.
+Production applies `expand@head` before the rollout and `contract@head` only after the new service is healthy. Preserve that order and design migrations for mixed old/new pods. (The pipeline has no migration step while the backend is between ECS and Kubernetes; the rule stands for when it returns.)
 
 ## Test Persistence
 

@@ -1410,6 +1410,25 @@ files = [
 ]
 
 [[package]]
+name = "hello-world"
+version = "0.2.0"
+description = "Hello-world FastAPI canary for EKS migration"
+optional = false
+python-versions = "^3.14"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+fastapi = {version = "^0.136.0", extras = ["standard"]}
+ticketmaster-libs = "^0.7.0"
+uvicorn = "^0.44.0"
+
+[package.source]
+type = "directory"
+url = "src/hello_world"
+
+[[package]]
 name = "httpcore"
 version = "1.0.9"
 description = "A minimal low-level HTTP client."
@@ -4020,4 +4039,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.14"
-content-hash = "1bfe8992582f0320471de86d067efb264012354f1254ac2f2f737834e9ad332f"
+content-hash = "030709af8f7b57c5690844eac934c8ec745c0610e7ab983a7a4e91a1e155485e"

@@ -12,6 +12,7 @@ requires = ["poetry-core"]
 python = "^3.14"
 ticketmaster-libs = {path = "src/libs", develop = true}
 ticketmaster = {path = "src/ticketmaster", develop = true}
+hello-world = {path = "src/hello_world", develop = true}
 cognito-pre-signup-lambda = {path = "src/lambdas/cognito_pre_signup", develop = true}
 pre-commit = "^4.5.1"
 ruff = "^0.15.10"

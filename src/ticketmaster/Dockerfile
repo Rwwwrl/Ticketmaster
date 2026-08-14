@@ -9,7 +9,8 @@ COPY pyproject.toml ./
 
 RUN --mount=type=secret,id=codeartifact_token \
     poetry source add --priority=supplemental codeartifact "$CODEARTIFACT_INDEX_URL" && \
-    poetry config http-basic.codeartifact aws "$(cat /run/secrets/codeartifact_token)" && \
+    POETRY_HTTP_BASIC_CODEARTIFACT_USERNAME=aws \
+    POETRY_HTTP_BASIC_CODEARTIFACT_PASSWORD="$(cat /run/secrets/codeartifact_token)" \
     poetry install --no-root --only main
 
 COPY ticketmaster/ ./ticketmaster/
