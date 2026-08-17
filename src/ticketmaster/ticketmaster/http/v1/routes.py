@@ -112,13 +112,16 @@ async def search_events(
     cursor: Annotated[EventCursorDTO | None, Depends(decode_event_cursor)],
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> response_schemas.EventsPageResponseSchema:
-    async with Session() as session, session.begin():
-        items, next_cursor = await services.search_events(
-            session=session,
-            q=q,
-            cursor=cursor,
-            page_size=page_size,
-        )
+    try:
+        async with Session() as session, session.begin():
+            items, next_cursor = await services.search_events(
+                session=session,
+                q=q,
+                cursor=cursor,
+                page_size=page_size,
+            )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     return response_schemas.EventsPageResponseSchema(
         items=[ToEventResponseSchemaSerializer.serialize(dto=dto) for dto in items],

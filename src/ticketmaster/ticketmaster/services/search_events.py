@@ -2,6 +2,7 @@ from libs.common.services import create_service_cursor, encode_service_cursor
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ticketmaster.cursors import EventCursorBodyDTO, EventCursorDTO, EventDBCursorDTO
+from ticketmaster.enums import EventSortKeyEnum
 from ticketmaster.repositories import EventRepository
 from ticketmaster.schemas.dtos import BaseEventDTO
 from ticketmaster.settings import settings
@@ -13,6 +14,9 @@ async def search_events(
     cursor: EventCursorDTO | None,
     page_size: int,
 ) -> tuple[list[BaseEventDTO], str | None]:
+    if cursor is not None and cursor.body.sort_key != EventSortKeyEnum.RANK:
+        raise ValueError(f"sort_key={cursor.body.sort_key} is not supported for search events")
+
     page_index = cursor.body.page_index if cursor is not None else 0
 
     db_cursor = (
