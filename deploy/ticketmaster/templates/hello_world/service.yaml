@@ -5,7 +5,7 @@ metadata:
   labels:
     app: hello-world
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
     - port: 80
       targetPort: http

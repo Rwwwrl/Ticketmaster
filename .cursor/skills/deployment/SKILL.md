@@ -100,14 +100,14 @@ Useful read-only commands include:
 gh run list --workflow on-push-test.yaml --branch <test-branch>
 gh run view <run-id> --log-failed
 aws eks update-kubeconfig --name ticketmaster-test-eu --region eu-central-1
-kubectl -n ticketmaster get pods,svc
+kubectl -n ticketmaster get pods,svc,ingress
 kubectl -n ticketmaster describe pod <pod>
 kubectl -n ticketmaster logs deploy/hello-world
 helm -n ticketmaster status ticketmaster
 aws cloudformation describe-stack-events --stack-name ticketmaster-cognito-pre-signup-test-eu --region eu-central-1
 ```
 
-Read the Service's `status.loadBalancer.ingress[0].hostname` before probing `/readiness-check`. Note the chart's endpoints are hyphenated (`/health-check`, `/readiness-check`); the dormant ECS templates use `/readiness_check`.
+Read the Ingress's `status.loadBalancer.ingress[0].hostname` before probing `/readiness-check`. Note the chart's endpoints are hyphenated (`/health-check`, `/readiness-check`); the dormant ECS templates use `/readiness_check`.
 
 `Pending` pods on a cold cluster are usually Auto Mode still provisioning a node, not a scheduling failure. Check `kubectl get nodes` before diagnosing further.
 

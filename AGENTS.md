@@ -6,7 +6,7 @@ Ticketmaster is an online platform where anyone can browse and book tickets to l
 
 Deployment is mid-migration from ECS to Kubernetes. Environment naming is `<service>-<region-code>`; the only environment so far is `test-eu`.
 
-- **`hello_world`** deploys to EKS: GitHub Actions → CodeArtifact/ECR → Helm → EKS cluster `ticketmaster-test-eu` (Auto Mode). Chart `deploy/ticketmaster/`, namespace `ticketmaster`.
+- **`hello_world`** deploys to EKS: GitHub Actions → CodeArtifact/ECR → Helm → EKS cluster `ticketmaster-test-eu` (Auto Mode). Chart `deploy/ticketmaster/`, namespace `ticketmaster`. Exposed via a ClusterIP Service and an internet-facing ALB Ingress.
 - **`cognito_pre_signup`** deploys as a Lambda via CloudFormation.
 - **`ticketmaster` and `frontend` are not currently deployed.** Their code, Dockerfiles and CloudFormation templates (`service.yaml`, `migration.yaml`) are kept as the record of what their Kubernetes port must reproduce.
 
