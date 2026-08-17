@@ -4,7 +4,7 @@ from typing import Any
 
 from libs.common.schemas.base_db_cursor import BaseDBCursorDTO
 from libs.common.schemas.base_service_cursor import BaseServiceCursorBodyDTO, BaseServiceCursorDTO
-from libs.pydantic_ext.type_adapters import DATETIME_ADAPTER, DECIMAL_ADAPTER
+from libs.pydantic_ext.type_adapters import DATETIME_ADAPTER, DECIMAL_ADAPTER, FLOAT_ADAPTER
 from pydantic import model_validator
 
 from ticketmaster.enums import EventSortKeyEnum
@@ -12,13 +12,13 @@ from ticketmaster.enums import EventSortKeyEnum
 
 class EventDBCursorDTO(BaseDBCursorDTO):
     sort_key: EventSortKeyEnum
-    sort_key_value: Decimal | datetime
+    sort_key_value: Decimal | datetime | float
     id: int
 
 
 class EventCursorBodyDTO(BaseServiceCursorBodyDTO):
     sort_key: EventSortKeyEnum
-    sort_key_value: Decimal | datetime
+    sort_key_value: Decimal | datetime | float
     id: int
     page_index: int
 
@@ -38,6 +38,8 @@ class EventCursorBodyDTO(BaseServiceCursorBodyDTO):
                 sort_key_value = DATETIME_ADAPTER.validate_python(sort_key_value)
             case EventSortKeyEnum.PRICE:
                 sort_key_value = DECIMAL_ADAPTER.validate_python(sort_key_value)
+            case EventSortKeyEnum.RANK:
+                sort_key_value = FLOAT_ADAPTER.validate_python(sort_key_value)
 
         return {
             **data,

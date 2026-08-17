@@ -4,13 +4,19 @@ Ticketmaster is an online platform where anyone can browse and book tickets to l
 
 ## Deployment
 
-The service deploys to AWS via GitHub Actions → ECR → CloudFormation → ECS Express Mode. Environment naming is `<service>-<region-code>`; the only environment so far is `test-eu`.
+Deployment is mid-migration from ECS to Kubernetes. Environment naming is `<service>-<region-code>`; the only environment so far is `test-eu`.
+
+- **`hello_world`** deploys to EKS: GitHub Actions → CodeArtifact/ECR → Helm → EKS cluster `ticketmaster-test-eu` (Auto Mode). Charts `deploy/infra/` (IngressClass) and `deploy/application/` (workload + Ingress), default namespace. Exposed via a ClusterIP Service and an internet-facing ALB Ingress.
+- **`cognito_pre_signup`** deploys as a Lambda via CloudFormation.
+- **`ticketmaster` and `frontend` are not currently deployed.** Their code, Dockerfiles and CloudFormation templates (`service.yaml`, `migration.yaml`) are kept as the record of what their Kubernetes port must reproduce.
+
+A push to `test/**` runs `publish-libs → publish-services-docker-images → helm-upgrade-application`, with `helm-upgrade-infra` in parallel (application waits for both) and the Lambda deploy in parallel.
 
 - **AWS region:** `eu-central-1` (Frankfurt). Anything region-scoped — KMS `kms:ViaService` conditions, SSM/Secrets Manager ARNs, GitHub Actions `vars.AWS_REGION` — must use this region.
 - **SSM/Secrets path convention:**
   - Env-shared (e.g. VPC, cluster): `/ticketmaster/<env>/<key>` — for example `/ticketmaster/test-eu/migration_subnets`.
   - Service-scoped: `/ticketmaster/<service>/<env>/<key>` — for example `/ticketmaster/ticketmaster/test-eu/POSTGRES_DB_URL`.
-- **Secrets Manager ARN suffix:** drop the `-XxXxXx` suffix from `service.yaml` / `migration.yaml` `ValueFrom`. ECS accepts the partial ARN; IAM matches via wildcard at runtime.
+- **Secrets Manager ARN suffix:** drop the `-XxXxXx` suffix from CloudFormation `ValueFrom`. ECS accepts the partial ARN; IAM matches via wildcard at runtime.
 
 ## Service Internal Architecture
 
@@ -69,7 +75,12 @@ Routes depend on services, services depend on repositories, repositories depend 
 
 ### Shared Library
 
-`src/libs/` is a separate Poetry package (`ticketmaster-libs`) with shared code. The service depends on it via path dependency: `ticketmaster-libs = { path = "../libs", develop = true }`.
+`src/libs/` is a separate Poetry package (`ticketmaster-libs`) published to CodeArtifact. Two dependency styles, deliberately:
+
+- **Root workspace `pyproject.toml`** uses a path dependency — `ticketmaster-libs = { path = "src/libs", develop = true }` — so local dev and tests run against the working tree.
+- **Each deployable service** (`src/ticketmaster`, `src/hello_world`) declares a published version — `ticketmaster-libs = "^0.7.0"` — because its Docker build context excludes `src/libs`. The image resolves the package from CodeArtifact; the root path dep wins locally.
+
+Bump `version` in `src/libs/pyproject.toml` whenever library code changes, or `publish-libs` skips the upload and services install stale code.
 
 ## Development
 

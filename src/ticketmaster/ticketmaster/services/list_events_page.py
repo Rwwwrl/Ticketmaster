@@ -51,6 +51,12 @@ async def list_events_page(
     cursor: EventCursorDTO | None,
     page_size: int,
 ) -> tuple[list[BaseEventDTO], str | None]:
+    if sort_key not in {EventSortKeyEnum.START_AT, EventSortKeyEnum.PRICE}:
+        raise ValueError(f"sort_key={sort_key} is not supported for list events")
+
+    if cursor is not None and cursor.body.sort_key != sort_key:
+        raise ValueError("Cursor does not match sort_key")
+
     page_index = cursor.body.page_index if cursor is not None else 0
     service_name = list_events_page.__name__
 

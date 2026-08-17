@@ -100,10 +100,11 @@ ipython_config.py
 #   commonly ignored for libraries.
 #   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
 #poetry.lock
-#   The ticketmaster service lock is intentionally NOT committed: the Docker build resolves
-#   ticketmaster-libs fresh from CodeArtifact (and never copies this lock), and local dev uses
+#   Service locks are intentionally NOT committed: the Docker builds resolve
+#   ticketmaster-libs fresh from CodeArtifact (and never copy these locks), and local dev uses
 #   the root workspace lock. A committed service lock can't be kept consistent offline.
 /src/ticketmaster/poetry.lock
+/src/hello_world/poetry.lock
 
 # pdm
 #   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
@@ -197,3 +198,4 @@ obsidian-scripts/
 **/env.dev.yaml
 docs
 frontend/public/config.js
+.cursor/settings.json

@@ -16,11 +16,12 @@ _SECRET = "cursor-test-secret"
     [
         (EventSortKeyEnum.START_AT, datetime(2026, 7, 1, tzinfo=UTC)),
         (EventSortKeyEnum.PRICE, Decimal("49.99")),
+        (EventSortKeyEnum.RANK, 0.42),
     ],
 )
 def test_event_cursor_signed_round_trip(
     sort_key: EventSortKeyEnum,
-    sort_key_value: datetime | Decimal,
+    sort_key_value: datetime | Decimal | float,
 ) -> None:
     cursor = create_service_cursor(
         cursor_class=EventCursorDTO,

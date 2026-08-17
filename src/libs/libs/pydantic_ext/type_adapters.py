@@ -5,3 +5,4 @@ from pydantic import TypeAdapter
 
 DATETIME_ADAPTER = TypeAdapter(datetime)
 DECIMAL_ADAPTER = TypeAdapter(Decimal)
+FLOAT_ADAPTER = TypeAdapter(float)

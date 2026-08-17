@@ -5,9 +5,6 @@ Parameters:
   Environment:
     Type: String
     AllowedValues: [test-eu]
-  TicketmasterApiUrl:
-    Type: String
-    Description: ALB endpoint of the deployed ticketmaster service.
 
 Resources:
   ExecutionRole:
@@ -47,7 +44,7 @@ Resources:
               return event
       Environment:
         Variables:
-          TICKETMASTER_API_URL: !Ref TicketmasterApiUrl
+          TICKETMASTER_API_URL: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/TICKETMASTER_API_URL}}'
           JWT_KMS_KEY_ARN: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_KMS_KEY_ARN}}'
           JWT_AUDIENCE: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/JWT_AUDIENCE}}'
           JWT_ISSUER: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/LAMBDA_JWT_ISSUER}}'

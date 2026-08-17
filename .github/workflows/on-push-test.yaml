@@ -21,31 +21,32 @@ jobs:
       package_path: src/libs
     secrets: inherit
 
-  deploy-ticketmaster:
+  publish-services-docker-images:
     needs: [publish-libs]
-    uses: ./.github/workflows/called-deploy-container-service.yaml
+    uses: ./.github/workflows/called-publish-docker-images.yaml
     with:
       environment: test-eu
-      service_name: ticketmaster
-      service_path: src/ticketmaster
-      run_migrations: true
+    secrets: inherit
+
+  helm-upgrade-infra:
+    uses: ./.github/workflows/called-helm-upgrade.yaml
+    with:
+      environment: test-eu
+      chart: infra
+    secrets: inherit
+
+  helm-upgrade-application:
+    needs: [publish-services-docker-images, helm-upgrade-infra]
+    uses: ./.github/workflows/called-helm-upgrade.yaml
+    with:
+      environment: test-eu
+      chart: application
     secrets: inherit
 
   deploy-cognito-pre-signup-lambda:
-    needs: [publish-libs]
     uses: ./.github/workflows/called-deploy-lambda.yaml
     with:
       environment: test-eu
       lambda_name: ticketmaster-cognito-pre-signup-test-eu
       lambda_path: src/lambdas/cognito_pre_signup
-    secrets: inherit
-
-  deploy-frontend:
-    needs: [publish-libs]
-    uses: ./.github/workflows/called-deploy-container-service.yaml
-    with:
-      environment: test-eu
-      service_name: frontend
-      service_path: frontend
-      run_migrations: false
     secrets: inherit

@@ -184,3 +184,4 @@ dist-ssr/
 .ruff_cache
 obsidian-scripts/
 .pi
+.cursor
