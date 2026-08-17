@@ -17,7 +17,8 @@ Deployment is mid-migration from ECS to Kubernetes. Only `hello_world` and the C
 - `.github/workflows/called-helm-upgrade.yaml`: Helm release on EKS
 - `.github/workflows/called-deploy-lambda.yaml`: Cognito PreSignUp Lambda deployment
 - `.github/workflows/on-pull-request.yaml`: validation gates
-- `deploy/ticketmaster/`: the Helm chart, `values.yaml` (defaults) and `values.test.yaml` (test-eu)
+- `deploy/infra/`: infrastructure Helm chart (IngressClass today)
+- `deploy/application/`: application Helm chart, `values.yaml` (defaults) and `values.test.yaml` (test-eu)
 - `src/lambdas/cognito_pre_signup/lambda.yaml`: Lambda infrastructure
 - `src/ticketmaster/{Dockerfile,service.yaml,migration.yaml}`, `frontend/{Dockerfile,service.yaml}`: dormant, pending the Kubernetes port
 
@@ -29,7 +30,8 @@ The workflow:
 
 1. `publish-libs` — publish `src/libs` to CodeArtifact.
 2. `publish-services-docker-images` — build each service image tagged with the Git SHA and push to ECR. Needs `publish-libs`: the Docker build installs `ticketmaster-libs` from CodeArtifact and must not race the publish.
-3. `helm-upgrade` — `helm upgrade --install ticketmaster ./deploy/ticketmaster` into namespace `ticketmaster`, with `--set helloWorld.image.tag=<sha>`.
+3. `helm-upgrade-infra` — `helm upgrade --install infra ./deploy/infra`. No image tag. Runs in parallel with publish.
+4. `helm-upgrade-application` — needs images and infra. `helm upgrade --install application ./deploy/application` into the default namespace, with `--set helloWorld.image.tag=<sha>`.
 
 `deploy-cognito-pre-signup-lambda` runs in parallel; it has no `ticketmaster-libs` dependency.
 
@@ -83,8 +85,9 @@ poetry run ruff check .
 poetry run ruff format --check .
 poetry run pytest --cov=src/libs/libs --cov=src/ticketmaster/ticketmaster --cov-report=term-missing --cov-fail-under=75
 cfn-lint src/ticketmaster/service.yaml src/ticketmaster/migration.yaml frontend/service.yaml
-helm template ticketmaster ./deploy/ticketmaster \
-  -f ./deploy/ticketmaster/values.test.yaml \
+helm template infra ./deploy/infra | kubeconform -strict -summary -schema-location default
+helm template application ./deploy/application \
+  -f ./deploy/application/values.test.yaml \
   --set helloWorld.image.tag=dummy | kubeconform -strict -summary -schema-location default
 ```
 
@@ -100,10 +103,11 @@ Useful read-only commands include:
 gh run list --workflow on-push-test.yaml --branch <test-branch>
 gh run view <run-id> --log-failed
 aws eks update-kubeconfig --name ticketmaster-test-eu --region eu-central-1
-kubectl -n ticketmaster get pods,svc,ingress
-kubectl -n ticketmaster describe pod <pod>
-kubectl -n ticketmaster logs deploy/hello-world
-helm -n ticketmaster status ticketmaster
+kubectl get pods,svc,ingress
+kubectl describe pod <pod>
+kubectl logs deploy/hello-world
+helm status infra
+helm status application
 aws cloudformation describe-stack-events --stack-name ticketmaster-cognito-pre-signup-test-eu --region eu-central-1
 ```
 

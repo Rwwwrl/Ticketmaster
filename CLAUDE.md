@@ -22,11 +22,11 @@ Implementation plans go in `plans/` (see `.claude/settings.json`).
 
 Deployment is mid-migration from ECS to Kubernetes. Environment naming is `<service>-<region-code>`; the only environment so far is `test-eu`.
 
-- **`hello_world`** deploys to EKS: GitHub Actions → CodeArtifact/ECR → Helm → EKS cluster `ticketmaster-test-eu` (Auto Mode). Chart `deploy/ticketmaster/`, namespace `ticketmaster`. Exposed via a ClusterIP Service and an internet-facing ALB Ingress.
+- **`hello_world`** deploys to EKS: GitHub Actions → CodeArtifact/ECR → Helm → EKS cluster `ticketmaster-test-eu` (Auto Mode). Charts `deploy/infra/` (IngressClass) and `deploy/application/` (workload + Ingress), default namespace. Exposed via a ClusterIP Service and an internet-facing ALB Ingress.
 - **`cognito_pre_signup`** deploys as a Lambda via CloudFormation.
 - **`ticketmaster` and `frontend` are not currently deployed.** Their code, Dockerfiles and CloudFormation templates (`service.yaml`, `migration.yaml`) are kept as the record of what their Kubernetes port must reproduce.
 
-A push to `test/**` runs `publish-libs → publish-services-docker-images → helm-upgrade` in sequence, with the Lambda deploy in parallel.
+A push to `test/**` runs `publish-libs → publish-services-docker-images → helm-upgrade-application`, with `helm-upgrade-infra` in parallel (application waits for both) and the Lambda deploy in parallel.
 
 - **AWS region:** `eu-central-1` (Frankfurt). Anything region-scoped — KMS `kms:ViaService` conditions, SSM/Secrets Manager ARNs, GitHub Actions `vars.AWS_REGION` — must use this region.
 - **SSM/Secrets path convention:**

@@ -6,6 +6,9 @@ on:
       environment:
         required: true
         type: string
+      chart:
+        required: true
+        type: string
 
 jobs:
   helm-upgrade:
@@ -36,17 +39,26 @@ jobs:
 
       - name: Helm upgrade
         run: |
-          if [ "${{ inputs.environment }}" = "test-eu" ]; then
-            VALUES_FILE=./deploy/ticketmaster/values.test.yaml
-          else
+          if [ "${{ inputs.environment }}" != "test-eu" ]; then
             echo "Unexpected environment: ${{ inputs.environment }}" >&2
             exit 1
           fi
 
-          helm upgrade --install ticketmaster ./deploy/ticketmaster \
-            --namespace ticketmaster \
-            --create-namespace \
-            -f "$VALUES_FILE" \
-            --set helloWorld.image.tag=${{ github.sha }} \
-            --wait \
-            --timeout 10m
+          case "${{ inputs.chart }}" in
+            infra)
+              helm upgrade --install infra ./deploy/infra \
+                --wait \
+                --timeout 10m
+              ;;
+            application)
+              helm upgrade --install application ./deploy/application \
+                -f ./deploy/application/values.test.yaml \
+                --set helloWorld.image.tag=${{ github.sha }} \
+                --wait \
+                --timeout 10m
+              ;;
+            *)
+              echo "Unexpected chart: ${{ inputs.chart }}" >&2
+              exit 1
+              ;;
+          esac
