@@ -7,6 +7,13 @@ set -euo pipefail
 
 export PATH="$HOME/.local/bin:$PATH"
 
+# Ensure Node/npm (installed via nvm in the base image) is available in non-login shells.
+if ! command -v npm >/dev/null 2>&1; then
+  export NVM_DIR="$HOME/.nvm"
+  # shellcheck disable=SC1091
+  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
