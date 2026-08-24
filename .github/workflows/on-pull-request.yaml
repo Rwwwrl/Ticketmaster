@@ -71,21 +71,19 @@ jobs:
 
       - uses: bmuschko/setup-kubeconform@v1
 
+      - uses: ./.github/actions/render-manifests
+        with:
+          environment: test-eu
+          out_dir: ${{ runner.temp }}/rendered
+
       - name: Validate manifests
         run: |
-          kubeconform_flags=(
-            -strict
-            -summary
-            -schema-location default
-            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
-          )
-
-          helm template infra ./deploy/infra \
-            | kubeconform "${kubeconform_flags[@]}"
-
-          helm template application ./deploy/application \
-            -f ./deploy/application/values.yaml \
-            | kubeconform "${kubeconform_flags[@]}"
+          kubeconform \
+            -strict \
+            -summary \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            "${{ runner.temp }}/rendered"
 
   lint_and_test:
     runs-on: ubuntu-latest

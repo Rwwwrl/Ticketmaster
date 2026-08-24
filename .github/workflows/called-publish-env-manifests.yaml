@@ -1,0 +1,73 @@
+name: Publish Env Manifests
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+
+jobs:
+  render-manifests:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.4
+
+      - uses: ./.github/actions/render-manifests
+        with:
+          environment: ${{ inputs.environment }}
+          out_dir: ${{ runner.temp }}/rendered
+
+      - name: Commit rendered manifests to env branch
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          RENDERED: ${{ runner.temp }}/rendered
+          SOURCE_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          ENV_BRANCH="env/${ENVIRONMENT}"
+          WORKDIR="${RUNNER_TEMP}/env-branch"
+
+          rm -rf "$WORKDIR"
+          mkdir -p "$WORKDIR"
+          cd "$WORKDIR"
+
+          git init -q
+          git remote add origin \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          if git fetch -q --depth=1 origin "$ENV_BRANCH"; then
+            git checkout -q FETCH_HEAD
+            git switch -q -c "$ENV_BRANCH"
+          else
+            echo "Branch ${ENV_BRANCH} does not exist yet; creating it"
+            git switch -q --orphan "$ENV_BRANCH"
+          fi
+
+          # Replace the tree wholesale so a deleted template disappears rather than lingering
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -R "${RENDERED}/." .
+
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Rendered manifests are unchanged; nothing to commit"
+            exit 0
+          fi
+
+          git \
+            -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Render ${ENVIRONMENT} manifests from ${SOURCE_SHA}"
+
+          git push -q origin "$ENV_BRANCH"

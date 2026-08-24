@@ -1,5 +1,6 @@
+commitSha: ""
+
 helloWorld:
   replicas: 1
   image:
     repository: ""
-    tag: latest

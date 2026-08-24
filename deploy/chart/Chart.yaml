@@ -1,0 +1,5 @@
+apiVersion: v2
+name: ticketmaster
+description: Ticketmaster Helm chart (infrastructure and workloads)
+type: application
+version: 0.1.0
