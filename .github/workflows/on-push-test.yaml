@@ -6,7 +6,7 @@ on:
       - "test/**"
 
 permissions:
-  contents: write
+  contents: read
   id-token: write
 
 concurrency:
@@ -33,6 +33,7 @@ jobs:
     uses: ./.github/workflows/called-publish-env-manifests.yaml
     with:
       environment: test-eu
+    secrets: inherit
 
   deploy-cognito-pre-signup-lambda:
     uses: ./.github/workflows/called-deploy-lambda.yaml

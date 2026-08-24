@@ -13,7 +13,7 @@ jobs:
     environment: ${{ inputs.environment }}
     timeout-minutes: 10
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v6
 
@@ -27,12 +27,18 @@ jobs:
           environment: ${{ inputs.environment }}
           out_dir: ${{ runner.temp }}/rendered
 
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          app-id: ${{ vars.ENV_PUBLISHER_APP_ID }}
+          private-key: ${{ secrets.ENV_PUBLISHER_PRIVATE_KEY }}
+
       - name: Commit rendered manifests to env branch
         env:
           ENVIRONMENT: ${{ inputs.environment }}
           RENDERED: ${{ runner.temp }}/rendered
           SOURCE_SHA: ${{ github.sha }}
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
 
@@ -66,8 +72,8 @@ jobs:
           fi
 
           git \
-            -c user.name="github-actions[bot]" \
-            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            -c user.name="ticketmaster-env-publisher[bot]" \
+            -c user.email="320418821+ticketmaster-env-publisher[bot]@users.noreply.github.com" \
             commit -q -m "Render ${ENVIRONMENT} manifests from ${SOURCE_SHA}"
 
           git push -q origin "$ENV_BRANCH"

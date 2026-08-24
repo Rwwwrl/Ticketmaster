@@ -31,7 +31,7 @@ The workflow:
 
 1. `publish-libs` — publish `src/libs` to CodeArtifact.
 2. `publish-services-docker-images` — build each service image tagged with the Git SHA and push to ECR. Needs `publish-libs`: the Docker build installs `ticketmaster-libs` from CodeArtifact and must not race the publish.
-3. `render-manifests` — needs images. Runs `helm template` on `deploy/chart` with `--set commitSha=$GITHUB_SHA`, then force-replaces the tree on the orphan branch `env/test-eu` and pushes. It needs only `contents: write`: no AWS, no OIDC, no cluster access.
+3. `render-manifests` — needs images. Runs `helm template` on `deploy/chart` with `--set commitSha=$GITHUB_SHA`, then force-replaces the tree on the orphan branch `env/test-eu` and pushes with a GitHub App token (`ticketmaster-env-publisher`). The default `GITHUB_TOKEN` is `contents: read` only: no AWS, no OIDC, no cluster access. The App is the identity that can write `env/**` once the ruleset exists.
 
 `deploy-cognito-pre-signup-lambda` runs in parallel; it has no `ticketmaster-libs` dependency.
 
