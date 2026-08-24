@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hello-world"
-version = "0.2.0"
+version = "0.2.1"
 description = "Hello-world FastAPI canary for EKS migration"
 authors = ["Aleksei Sosov <forgithublesh@yandex.ru>"]
 packages = [{ include = "hello_world" }]
