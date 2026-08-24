@@ -26,7 +26,7 @@ spec:
               app: hello-world
       containers:
         - name: hello-world
-          image: "{{ .Values.helloWorld.image.repository }}:{{ .Values.helloWorld.image.tag }}"
+          image: '{{ .Values.helloWorld.image.repository }}:{{ required "commitSha must be set (--set commitSha=$GITHUB_SHA)" .Values.commitSha }}'
           command: ["poetry", "run", "uvicorn"]
           args:
             - "hello_world.main:app"

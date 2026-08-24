@@ -1,0 +1,35 @@
+name: Render manifests
+description: Render the Ticketmaster Helm chart to plain Kubernetes YAML for Argo CD
+
+inputs:
+  environment:
+    description: Target environment (e.g. test-eu)
+    required: true
+  out_dir:
+    description: Directory the rendered manifests are written to
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        ENVIRONMENT: ${{ inputs.environment }}
+        OUT_DIR: ${{ inputs.out_dir }}
+      run: |
+        set -euo pipefail
+
+        case "$ENVIRONMENT" in
+          test-eu) VALUES=deploy/chart/values.test.yaml ;;
+          *) echo "::error::Unexpected environment: $ENVIRONMENT" >&2; exit 1 ;;
+        esac
+
+        STAGE="$(mktemp -d)"
+        helm template ticketmaster deploy/chart \
+          -f "$VALUES" \
+          --set "commitSha=$GITHUB_SHA" \
+          --output-dir "$STAGE"
+
+        # Strip Helm's <chart>/templates/ prefix; the branch holds plain Kubernetes YAML
+        rm -rf "$OUT_DIR"; mkdir -p "$OUT_DIR"
+        cp -R "$STAGE/ticketmaster/templates/." "$OUT_DIR/"

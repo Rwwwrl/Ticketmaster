@@ -28,19 +28,11 @@ jobs:
       environment: test-eu
     secrets: inherit
 
-  helm-upgrade-infra:
-    uses: ./.github/workflows/called-helm-upgrade.yaml
+  render-manifests:
+    needs: [publish-services-docker-images]
+    uses: ./.github/workflows/called-publish-env-manifests.yaml
     with:
       environment: test-eu
-      chart: infra
-    secrets: inherit
-
-  helm-upgrade-application:
-    needs: [publish-services-docker-images, helm-upgrade-infra]
-    uses: ./.github/workflows/called-helm-upgrade.yaml
-    with:
-      environment: test-eu
-      chart: application
     secrets: inherit
 
   deploy-cognito-pre-signup-lambda:

@@ -22,11 +22,13 @@ Implementation plans go in `plans/` (see `.claude/settings.json`).
 
 Deployment is mid-migration from ECS to Kubernetes. Environment naming is `<service>-<region-code>`; the only environment so far is `test-eu`.
 
-- **`hello_world`** deploys to EKS: GitHub Actions → CodeArtifact/ECR → Helm → EKS cluster `ticketmaster-test-eu` (Auto Mode). Charts `deploy/infra/` (IngressClass) and `deploy/application/` (workload + Ingress), default namespace. Exposed via a ClusterIP Service and an internet-facing ALB Ingress.
+- **`hello_world`** deploys to EKS through GitOps: GitHub Actions → CodeArtifact/ECR → rendered manifests on the `env/test-eu` branch → Argo CD → EKS cluster `ticketmaster-test-eu` (Auto Mode). One chart, `deploy/chart/`, with `templates/infra/` (IngressClass) and `templates/hello_world/` (workload + Ingress), default namespace. Exposed via a ClusterIP Service and an internet-facing ALB Ingress.
 - **`cognito_pre_signup`** deploys as a Lambda via CloudFormation.
 - **`ticketmaster` and `frontend` are not currently deployed.** Their code, Dockerfiles and CloudFormation templates (`service.yaml`, `migration.yaml`) are kept as the record of what their Kubernetes port must reproduce.
 
-A push to `test/**` runs `publish-libs → publish-services-docker-images → helm-upgrade-application`, with `helm-upgrade-infra` in parallel (application waits for both) and the Lambda deploy in parallel.
+A push to `test/**` runs `publish-libs → publish-services-docker-images → render-manifests`, with the Lambda deploy in parallel. `render-manifests` runs `helm template` with `--set commitSha=$GITHUB_SHA` and force-pushes the result to the orphan branch `env/test-eu`; it never touches the cluster. Argo CD polls that branch and syncs with `prune` and `selfHeal` on. (The Argo install and the cutover off Helm are a manual, once-per-cluster step — see `docs/argocd_setup.md` Part 1 — and are still pending, so the cluster currently runs the last Helm-deployed version.)
+
+Argo CD is the only writer to the cluster. CI must never run `helm upgrade` or `kubectl apply` — two owners of the same resources is exactly what this removes. The image tag is chart-level: every service reads one `commitSha` value, `required` in the template so a lost `--set` fails the render. The action holds no manifest allow-list — deleting a template is how you delete a resource — so `helm template` under `set -euo pipefail` is the only gate. The render must stay deterministic (no timestamps or run numbers in the output), since the "nothing to commit" no-op depends on it.
 
 - **AWS region:** `eu-central-1` (Frankfurt). Anything region-scoped — KMS `kms:ViaService` conditions, SSM/Secrets Manager ARNs, GitHub Actions `vars.AWS_REGION` — must use this region.
 - **SSM/Secrets path convention:**
