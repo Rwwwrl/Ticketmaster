@@ -12,7 +12,7 @@ Repo-specific skills live in `.claude/skills/`. Use them instead of improvising:
 | `sqlmodel` | Models, fields, constraints, indexes, sessions, repositories, queries, transactions, Alembic migrations |
 | `redis-cache` | Redis connectivity, typed cache documents, keys, TTLs, cache-aside services, invalidation |
 | `testing` | Test boundaries, fixtures, factories, mocking, coverage, CI checks |
-| `deployment` | GitHub Actions, ECR, CodeArtifact, Helm, EKS, kubectl, CloudFormation, SSM, Secrets Manager, IAM, KMS |
+| `deployment` | GitHub Actions, ECR, CodeArtifact, Helm template, rendered manifests, Argo CD, EKS, kubectl, CloudFormation, Lambda, SSM, Secrets Manager, IAM, KMS |
 | `git-branch` | Naming and creating a branch for a task |
 | `commit` | Committing staged changes in the repo's subject format |
 
@@ -20,15 +20,17 @@ Implementation plans go in `plans/` (see `.claude/settings.json`).
 
 ## Deployment
 
-Deployment is mid-migration from ECS to Kubernetes. Environment naming is `<service>-<region-code>`; the only environment so far is `test-eu`.
+Delivery to the cluster is GitOps. **Argo CD is the only writer to the cluster**; git is the only source of truth for what it writes. CI never runs `helm upgrade` or `kubectl apply`. Environment naming is `<service>-<region-code>`; the only environment so far is `test-eu`.
 
-- **`hello_world`** deploys to EKS through GitOps: GitHub Actions → CodeArtifact/ECR → rendered manifests on the `env/test-eu` branch → Argo CD → EKS cluster `ticketmaster-test-eu` (Auto Mode). One chart, `deploy/chart/`, with `templates/infra/` (IngressClass) and `templates/hello_world/` (workload + Ingress), default namespace. Exposed via a ClusterIP Service and an internet-facing ALB Ingress.
-- **`cognito_pre_signup`** deploys as a Lambda via CloudFormation.
-- **`ticketmaster` and `frontend` are not currently deployed.** Their code, Dockerfiles and CloudFormation templates (`service.yaml`, `migration.yaml`) are kept as the record of what their Kubernetes port must reproduce.
+- **`hello_world`** deploys to EKS: GitHub Actions → CodeArtifact/ECR → `helm template` → orphan branch `env/test-eu` → Argo CD Application `application-test-eu` → cluster `ticketmaster-test-eu` (Auto Mode). One chart, `deploy/chart/`, with `templates/infra/` (IngressClass `alb`) and `templates/hello_world/` (Deployment + ClusterIP Service + internet-facing ALB Ingress), destination namespace `default`.
+- **`cognito_pre_signup`** deploys as a Lambda via CloudFormation. It is not on Kubernetes.
+- **`ticketmaster` and `frontend` are not deployed.** Their code, Dockerfiles and CloudFormation templates (`service.yaml`, `migration.yaml`) are the record of what the Kubernetes port must reproduce.
 
-A push to `test/**` runs `publish-libs → publish-services-docker-images → render-manifests`, with the Lambda deploy in parallel. `render-manifests` runs `helm template` with `--set commitSha=$GITHUB_SHA` and force-pushes the result to the orphan branch `env/test-eu`; it never touches the cluster. Argo CD polls that branch and syncs with `prune` and `selfHeal` on. (The Argo install and the cutover off Helm are a manual, once-per-cluster step — see `docs/argocd_setup.md` Part 1 — and are still pending, so the cluster currently runs the last Helm-deployed version.)
+A push to `test/**` runs `publish-libs → publish-services-docker-images → render-manifests`, with the Lambda deploy in parallel. `render-manifests` runs `helm template` with `--set commitSha=$GITHUB_SHA` and force-pushes the result to `env/test-eu`. It has `contents: read` plus a GitHub App token (`ticketmaster-env-publisher`) that can write `env/**`; no AWS, no OIDC, no kubeconfig.
 
-Argo CD is the only writer to the cluster. CI must never run `helm upgrade` or `kubectl apply` — two owners of the same resources is exactly what this removes. The image tag is chart-level: every service reads one `commitSha` value, `required` in the template so a lost `--set` fails the render. The action holds no manifest allow-list — deleting a template is how you delete a resource — so `helm template` under `set -euo pipefail` is the only gate. The render must stay deterministic (no timestamps or run numbers in the output), since the "nothing to commit" no-op depends on it.
+Argo CD runs in namespace `argocd`. It watches `env/test-eu` with `path: .`, `directory.recurse: true` (required — manifests live in `infra/` and `hello_world/`, not at the branch root), automated sync, `prune: true`, `selfHeal: true`, and retries. The UI is reached only with `kubectl -n argocd port-forward svc/argocd-server 8080:443` → `https://localhost:8080`. There is no Ingress for Argo.
+
+The image tag is chart-level: one `commitSha`, `required` in the template so a lost `--set` fails the render. The action holds no manifest allow-list — deleting a template is how you delete a resource. The render must stay byte-deterministic (no timestamps or run numbers); the "nothing to commit" no-op depends on it. Rollback is git: revert the commit on `env/test-eu`, or re-run the pipeline on the previous source SHA. There is no Helm release.
 
 - **AWS region:** `eu-central-1` (Frankfurt). Anything region-scoped — KMS `kms:ViaService` conditions, SSM/Secrets Manager ARNs, GitHub Actions `vars.AWS_REGION` — must use this region.
 - **SSM/Secrets path convention:**

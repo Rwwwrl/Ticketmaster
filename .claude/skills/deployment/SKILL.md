@@ -1,13 +1,13 @@
 ---
 name: deployment
-description: Work safely with Ticketmaster deployment and AWS infrastructure. Use for test releases, GitHub Actions, ECR, CodeArtifact, Helm, rendered manifests, Argo CD, GitOps sync, EKS, kubectl, CloudFormation, Lambda, SSM, Secrets Manager, IAM, KMS, deployment diagnosis, or teardown.
+description: Work safely with Ticketmaster deployment and AWS infrastructure. Use for test releases, GitHub Actions, ECR, CodeArtifact, Helm template, rendered manifests, Argo CD, GitOps sync, EKS, kubectl, CloudFormation, Lambda, SSM, Secrets Manager, IAM, KMS, deployment diagnosis, or teardown.
 ---
 
 # Ticketmaster Deployment
 
 Use the repository workflows and templates as the source of truth. The only environment is `test-eu` in `eu-central-1`; never infer or invent production infrastructure.
 
-Deployment is mid-migration from ECS to Kubernetes, and delivery to the cluster is GitOps: **Argo CD is the only thing that writes to the cluster**, and git is the only source of truth for what it writes. CI never touches Kubernetes. Only `hello_world` and the Cognito PreSignUp Lambda are deployed today. `ticketmaster` and `frontend` still have code, Dockerfiles and CloudFormation templates, but **no active deployment** — their templates are the record of what the Kubernetes port must reproduce.
+Delivery to the cluster is GitOps: **Argo CD is the only writer to the cluster**, and git is the only source of truth for what it writes. CI never touches Kubernetes. Only `hello_world` and the Cognito PreSignUp Lambda are deployed today. `ticketmaster` and `frontend` still have code, Dockerfiles and CloudFormation templates, but **no active deployment** — their templates are the record of what the Kubernetes port must reproduce.
 
 ## Locate Deployment Code
 
@@ -20,6 +20,7 @@ Deployment is mid-migration from ECS to Kubernetes, and delivery to the cluster 
 - `.github/workflows/on-pull-request.yaml`: validation gates
 - `deploy/chart/`: the single Helm chart — `templates/infra/` (IngressClass) and `templates/hello_world/` (workload + Ingress), `values.yaml` (defaults) and `values.test.yaml` (test-eu)
 - `env/test-eu` branch: the rendered plain-YAML manifests Argo CD applies. Machine-written by CI only — never commit to it by hand
+- Argo CD Application `application-test-eu` in namespace `argocd` (created in the UI, not in this repo)
 - `src/lambdas/cognito_pre_signup/lambda.yaml`: Lambda infrastructure
 - `src/ticketmaster/{Dockerfile,service.yaml,migration.yaml}`, `frontend/{Dockerfile,service.yaml}`: dormant, pending the Kubernetes port
 
@@ -31,11 +32,45 @@ The workflow:
 
 1. `publish-libs` — publish `src/libs` to CodeArtifact.
 2. `publish-services-docker-images` — build each service image tagged with the Git SHA and push to ECR. Needs `publish-libs`: the Docker build installs `ticketmaster-libs` from CodeArtifact and must not race the publish.
-3. `render-manifests` — needs images. Runs `helm template` on `deploy/chart` with `--set commitSha=$GITHUB_SHA`, then force-replaces the tree on the orphan branch `env/test-eu` and pushes with a GitHub App token (`ticketmaster-env-publisher`). The default `GITHUB_TOKEN` is `contents: read` only: no AWS, no OIDC, no cluster access. The App is the identity that can write `env/**` once the ruleset exists.
+3. `render-manifests` — needs images. Runs `helm template` on `deploy/chart` with `--set commitSha=$GITHUB_SHA`, then force-replaces the tree on the orphan branch `env/test-eu` and pushes with a GitHub App token (`ticketmaster-env-publisher`). The default `GITHUB_TOKEN` is `contents: read` only: no AWS, no OIDC, no cluster access. The App is the identity that can write `env/**`.
 
 `deploy-cognito-pre-signup-lambda` runs in parallel; it has no `ticketmaster-libs` dependency.
 
-Argo CD polls `env/test-eu` (~3 min) and syncs with `prune` and `selfHeal` on. **The Argo install and the cutover off Helm are manual and still pending** (`docs/argocd_setup.md` Part 1), so today the branch accumulates commits nothing consumes and the cluster runs the last Helm-deployed version. Do not perform that cutover on your own initiative. The ordering guarantee is structural, not a feature: **Argo watches a ref only CI writes, and CI writes it only after the images are pushed.** Never restore a `helm upgrade` step — two writers of the same resources is the failure this design removes.
+Argo CD (namespace `argocd`) polls `env/test-eu` (~3 min) and syncs Application `application-test-eu`:
+
+```yaml
+project: default
+source:
+  repoURL: https://github.com/Rwwwrl/Ticketmaster.git
+  path: .
+  targetRevision: env/test-eu
+  directory:
+    recurse: true
+destination:
+  server: https://kubernetes.default.svc
+  namespace: default
+syncPolicy:
+  automated:
+    prune: true
+    selfHeal: true
+  retry:
+    limit: 5
+    backoff:
+      duration: 10s
+      factor: 2
+      maxDuration: 5m
+```
+
+**`directory.recurse: true` is mandatory.** Manifests live in `infra/` and `hello_world/`. Recurse off plus prune on makes desired state empty and deletes everything the Application tracks, including the Ingress (and the ALB). Do not turn recurse off. Do not recreate this Application from scratch unless the user explicitly asks; editing it in the Argo UI YAML pane is spec-only — do not wrap a second `apiVersion`/`kind`/`spec`.
+
+The UI is port-forward only. There is no Ingress, LoadBalancer, or SSO for Argo:
+
+```bash
+kubectl -n argocd port-forward svc/argocd-server 8080:443
+# https://localhost:8080  (self-signed cert; user admin)
+```
+
+The ordering guarantee is structural: **Argo watches a ref only CI writes, and CI writes it only after the images are pushed.** Never restore a `helm upgrade` or `kubectl apply` step in CI — two writers of the same resources is the failure this design removes. Helm is a render tool in CI, not a cluster release manager. `helm status` / `helm rollback` return nothing. Rollback means reverting the commit on `env/test-eu`, or re-running the pipeline on the previous source commit.
 
 **`commitSha` is chart-level, not per-service.** Every image in this repo is tagged with the same commit SHA, so the chart declares one `commitSha` value and each service template reads it — adding a service never touches CI. It is `required` in the template, so a render that loses the `--set` fails loudly instead of emitting a tag no one pushed. Do not reintroduce a per-service `image.tag` value or a default tag in `values.yaml`.
 
@@ -45,9 +80,9 @@ Never add a timestamp or run-number banner to the rendered output — the no-op 
 
 **Accepted risk:** the Application prunes, so a render that produced no manifests would be a valid commit that wipes the cluster. Nothing in the chart sits behind a conditional today, so it cannot silently shrink. If you ever add `{{- if .Values.x.enabled }}` around a template, revisit that.
 
-CI now goes green at `git push`, before the deploy lands; there is no `--wait` gate any more. The cluster is EKS Auto Mode and scales from zero, so a cold deploy pays Karpenter node provisioning plus image pull before any pod is Ready — check Argo, not the workflow, to know a deploy finished.
+CI goes green at `git push`, before the deploy lands; there is no `argocd app wait` gate. The cluster is EKS Auto Mode and scales from zero, so a cold deploy pays node provisioning plus image pull before any pod is Ready — check Argo, not the workflow, to know a deploy finished.
 
-Service images must not copy a `poetry.lock`. Service `pyproject.toml` files declare a published `ticketmaster-libs` version; the build resolves it from CodeArtifact using `--build-arg CODEARTIFACT_INDEX_URL` and `--mount=type=secret,id=codeartifact_token`. Never bake the token into a layer.
+Service images must not copy a `poetry.lock`. Service `pyproject.toml` files declare a published `ticketmaster-libs` version; the build resolves it from CodeArtifact using `--build-arg CODEARTIFACT_INDEX_URL` and `--secret id=codeartifact_token`. Never bake the token into a layer.
 
 **Dormant rule, restore with the backend port:** database migrations run expand → rollout → contract. Never reorder or collapse that sequence, stop after an expand failure, and do not run contract after a failed rollout. The backend image must contain `alembic.ini` and `migrations/` so the same image SHA serves the app and both migration phases. There is no migration step in the pipeline today.
 
@@ -94,7 +129,7 @@ Run the PR-equivalent checks:
 poetry run ruff check .
 poetry run ruff format --check .
 poetry run pytest --cov=src/libs/libs --cov=src/ticketmaster/ticketmaster --cov-report=term-missing --cov-fail-under=75
-cfn-lint src/ticketmaster/service.yaml src/ticketmaster/migration.yaml frontend/service.yaml
+cfn-lint src/*/service.yaml src/*/migration.yaml frontend/service.yaml
 helm template ticketmaster ./deploy/chart \
   -f ./deploy/chart/values.test.yaml \
   --set commitSha=dummy --output-dir /tmp/rendered
@@ -116,16 +151,16 @@ aws eks update-kubeconfig --name ticketmaster-test-eu --region eu-central-1
 kubectl get pods,svc,ingress
 kubectl describe pod <pod>
 kubectl logs deploy/hello-world
-kubectl port-forward svc/argocd-server -n argocd 8080:443
+kubectl -n argocd port-forward svc/argocd-server 8080:443
 argocd app get application-test-eu
 argocd app history application-test-eu
 git log --oneline origin/env/test-eu
 aws cloudformation describe-stack-events --stack-name ticketmaster-cognito-pre-signup-test-eu --region eu-central-1
 ```
 
-There is no Helm release any more, so `helm status`, `helm history` and `helm rollback` all return nothing. Rollback means reverting the commit on `env/test-eu`, or re-running the pipeline on the previous source commit. Argo is reachable only through `kubectl port-forward` today.
+There is no Helm release any more, so `helm status`, `helm history` and `helm rollback` all return nothing. Rollback means reverting the commit on `env/test-eu`, or re-running the pipeline on the previous source commit. Argo is reachable only through `kubectl port-forward` today. `selfHeal` reverts a manual `kubectl edit` of tracked resources; that is intended.
 
-Read the Ingress's `status.loadBalancer.ingress[0].hostname` before probing `/readiness-check`. Note the chart's endpoints are hyphenated (`/health-check`, `/readiness-check`); the dormant ECS templates use `/readiness_check`.
+Read the Ingress's `status.loadBalancer.ingress[0].hostname` before probing `/readiness-check`. Chart endpoints are hyphenated (`/health-check`, `/readiness-check`); the dormant CloudFormation templates use `/readiness_check`.
 
 `Pending` pods on a cold cluster are usually Auto Mode still provisioning a node, not a scheduling failure. Check `kubectl get nodes` before diagnosing further.
 
