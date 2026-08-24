@@ -28,7 +28,7 @@ spec:
               app: hello-world
       containers:
         - name: hello-world
-          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/hello-world:efee3722f9b536acfeae4d90cdd176a381071da0'
+          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/hello-world:13846827dda5886f37906740cdc0df86eeae10af'
           command: ["poetry", "run", "uvicorn"]
           args:
             - "hello_world.main:app"
