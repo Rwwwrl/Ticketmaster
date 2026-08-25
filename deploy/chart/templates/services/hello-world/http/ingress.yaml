@@ -3,6 +3,7 @@ kind: Ingress
 metadata:
   name: hello-world
   annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.services.helloWorld.meta.argocd.syncWave | quote }}
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/healthcheck-path: /readiness-check

@@ -1,4 +1,22 @@
-helloWorld:
-  replicas: 1
-  image:
-    repository: 258167965416.dkr.ecr.eu-central-1.amazonaws.com/hello-world
+infra:
+  meta:
+    region: eu-central-1
+    argocd:
+      syncWave: -10
+  externalSecrets:
+    serviceAccount:
+      roleArn: arn:aws:iam::258167965416:role/ticketmaster-test-eu-eso
+  services:
+    helloWorld:
+      secrets:
+        prefix: ticketmaster/hello-world/test-eu
+
+services:
+  helloWorld:
+    meta:
+      argocd:
+        syncWave: 0
+    image:
+      repository: 258167965416.dkr.ecr.eu-central-1.amazonaws.com/hello-world
+    http:
+      replicas: 1

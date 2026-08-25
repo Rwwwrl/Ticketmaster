@@ -37,10 +37,9 @@ restart-infra:
 
 
 [group('aws')]
-mint-admin-jwt:
-    poetry -C src/ticketmaster run python -m ticketmaster.admin.management.commands
-
-
-[group('aws')]
 test-k8s-use-context:
     kubectl config use-context arn:aws:eks:eu-central-1:258167965416:cluster/ticketmaster-test-eu
+
+[group('aws')]
+test-argocd-ui:
+    kubectl -n argocd port-forward svc/argocd-server 8080:443
