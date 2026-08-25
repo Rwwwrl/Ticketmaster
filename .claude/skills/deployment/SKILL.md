@@ -18,7 +18,7 @@ Delivery to the cluster is GitOps: **Argo CD is the only writer to the cluster**
 - `.github/actions/render-manifests/action.yaml`: the one place the render is defined, shared by deploy and PR validation
 - `.github/workflows/called-deploy-lambda.yaml`: Cognito PreSignUp Lambda deployment
 - `.github/workflows/on-pull-request.yaml`: validation gates
-- `deploy/chart/`: the single Helm chart — `templates/infra/` (IngressClass) and `templates/hello_world/` (workload + Ingress), `values.yaml` (defaults) and `values.test.yaml` (test-eu)
+- `deploy/chart/`: the single Helm chart — `templates/infra/` (IngressClass, ServiceAccount, two ClusterSecretStores, ExternalSecret) and `templates/hello_world/` (workload + Ingress), `values.yaml` (defaults) and `values.test.yaml` (test-eu)
 - `env/test-eu` branch: the rendered plain-YAML manifests Argo CD applies. Machine-written by CI only — never commit to it by hand
 - Argo CD Application `application-test-eu` in namespace `argocd` (created in the UI, not in this repo)
 - `src/lambdas/cognito_pre_signup/lambda.yaml`: Lambda infrastructure
@@ -72,6 +72,10 @@ kubectl -n argocd port-forward svc/argocd-server 8080:443
 
 The ordering guarantee is structural: **Argo watches a ref only CI writes, and CI writes it only after the images are pushed.** Never restore a `helm upgrade` or `kubectl apply` step in CI — two writers of the same resources is the failure this design removes. Helm is a render tool in CI, not a cluster release manager. `helm status` / `helm rollback` return nothing. Rollback means reverting the commit on `env/test-eu`, or re-running the pipeline on the previous source commit.
 
+**Sync waves are two values only, declared once in `values.yaml`.** `infra.argocd.syncWave: -10` and `helloWorld.argocd.syncWave: 0`; every template in that directory reads `argocd.argoproj.io/sync-wave: {{ .Values.<tier>.argocd.syncWave | quote }}` rather than hardcoding the string. The wave is a property of the directory — do not invent per-resource waves, and change the number in `values.yaml`, not in individual templates. `-5` is reserved for the RabbitMQ topology Job when it lands. Waves make the sync multi-step, so a Degraded resource now fails the operation and auto-sync will not retry the same commit SHA; the Application's `retry` block covers transient cases, beyond that it needs a manual Sync.
+
+**Do not add `argocd.argoproj.io/sync-options: Prune=false` to the `ExternalSecret`.** Pruning it is recoverable — the value lives in AWS, so reverting the commit brings the `Secret` back. `Prune=false` is reserved for resources holding state the cluster is the only copy of, such as a RabbitMQ `Queue`.
+
 **`commitSha` is chart-level, not per-service.** Every image in this repo is tagged with the same commit SHA, so the chart declares one `commitSha` value and each service template reads it — adding a service never touches CI. It is `required` in the template, so a render that loses the `--set` fails loudly instead of emitting a tag no one pushed. Do not reintroduce a per-service `image.tag` value or a default tag in `values.yaml`.
 
 The action deliberately holds **no** manifest allow-list and no post-render assertions: removing a template is how you remove a resource, and CI is the wrong place to encode the shape of the chart. What catches failure is `helm template` itself under `set -euo pipefail`, plus kubeconform on PRs.
@@ -101,7 +105,18 @@ Store non-secret configuration in SSM and sensitive values in Secrets Manager. B
 
 In CloudFormation `ValueFrom`, use the Secrets Manager ARN without the generated `-XxXxXx` suffix. Match the runtime secret in IAM with an appropriate wildcard.
 
-`hello_world` needs **zero configuration**. The chart injects no env vars at all — there is no `env:` block, no `ConfigMap`, no Kubernetes `Secret`, no External Secrets Operator, and the pod makes no AWS calls. It proves the `ticketmaster-libs` dependency by inheriting `BaseResponseSchema` from `libs.fastapi_ext.schemas.base_schemas`, which needs no settings. Do not add configuration plumbing without an explicit request.
+`hello_world` consumes exactly two values, and the plumbing is the reference for every service that follows:
+
+- `SECRET` from Secrets Manager `ticketmaster/hello-world/test-eu/SECRET`, `ENVIRONMENT` from SSM `/ticketmaster/hello-world/test-eu/ENVIRONMENT`.
+- One `ExternalSecret` reads both — `spec.data[].sourceRef.storeRef` names a store per key — and writes one Kubernetes `Secret` named `hello-world`, which the Deployment consumes with `envFrom`.
+- **Two `ClusterSecretStore`s are required, not a style choice.** A store holds one `spec.provider`, and the AWS provider's `service` is a scalar: `SecretsManager` or `ParameterStore`. Neither sets `spec.conditions` to restrict which namespace may use it — only `default` exists, and IAM already scopes `eso` to hello-world's ARNs regardless of the caller's namespace, so it would harden against nothing real. Each store's `auth.jwt.serviceAccountRef.namespace` is required, though — that field is mandatory for a `ClusterSecretStore` per ESO's docs, unlike a namespaced `SecretStore`.
+- **Auth is IRSA and cannot be Pod Identity.** Both stores use `auth.jwt.serviceAccountRef` → the chart's shared `eso` ServiceAccount; ESO mints a token for that SA and calls `sts:AssumeRoleWithWebIdentity`. ESO cannot impersonate a Pod-Identity-bound service account.
+- **One shared ServiceAccount, one IAM role, direct permissions — deliberately, for now.** `eso`'s own policy holds `secretsmanager:GetSecretValue` / `ssm:GetParameter` scoped to hello-world's ARNs. There is no per-service chained role: with one service it would add indirection for nothing. When a second service arrives, either widen `eso`'s policy or split it into an assume-only base role plus one chained role per service — `docs/aws_setup.md` section 14 documents both. The IAM role, its trust policy and the cluster's IAM OIDC provider are manual AWS work, and none of it is in this repo.
+- The `hello_world` pod itself does not set `serviceAccountName` — it runs as the namespace's `default` SA. It makes no AWS calls, so giving it its own ServiceAccount would be unused plumbing.
+- The `ExternalSecret` carries `force-sync: {{ .Values.commitSha }}`, which makes every deploy bump `resourceVersion` so ESO re-reads AWS. Never replace it with a `kubectl annotate` step in CI.
+- `Settings` subclasses `libs.settings.BaseAppSettings`, which requires both fields, so a missing value fails at import and the pod never becomes Ready. That is intentional. `GET /hello-world` returns a SHA-256 fingerprint of the secret, never the value.
+
+Adding a service means: its own stores and `ExternalSecret`, referencing the existing `eso` ServiceAccount — not a new ServiceAccount. Widening `eso`'s policy with the new service's ARNs is fine short-term; if that union grows uncomfortable, split `eso` into an assume-only base role plus a chained per-service role (`docs/aws_setup.md` section 14) rather than creating a new ServiceAccount. Do not let a workload pod use the `eso` ServiceAccount as its own identity.
 
 Whenever a required setting is added or renamed, update the chart or CloudFormation template that injects it, update test environment configuration, and ensure the value exists in SSM or Secrets Manager for `test-eu`.
 

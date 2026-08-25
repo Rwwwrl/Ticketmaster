@@ -2,5 +2,7 @@ apiVersion: networking.k8s.io/v1
 kind: IngressClass
 metadata:
   name: alb
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.infra.argocd.syncWave | quote }}
 spec:
   controller: eks.amazonaws.com/alb

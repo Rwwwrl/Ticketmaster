@@ -1,4 +1,13 @@
+aws:
+  region: eu-central-1
+
+eso:
+  serviceAccount:
+    roleArn: arn:aws:iam::258167965416:role/ticketmaster-test-eu-eso
+
 helloWorld:
   replicas: 1
   image:
     repository: 258167965416.dkr.ecr.eu-central-1.amazonaws.com/hello-world
+  secrets:
+    prefix: ticketmaster/hello-world/test-eu
