@@ -1,11 +1,13 @@
 ---
-# Source: ticketmaster/templates/hello_world/deployment.yaml
+# Source: ticketmaster/templates/services/hello-world/http/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hello-world
   labels:
     app: hello-world
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   replicas: 1
   strategy:
@@ -28,7 +30,7 @@ spec:
               app: hello-world
       containers:
         - name: hello-world
-          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/hello-world:13846827dda5886f37906740cdc0df86eeae10af'
+          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/hello-world:40ceae9a72248a22c057e17846721f4ed18fc0f6'
           command: ["poetry", "run", "uvicorn"]
           args:
             - "hello_world.main:app"
@@ -38,6 +40,9 @@ spec:
             - "8080"
             - "--timeout-keep-alive"
             - "75"
+          envFrom:
+            - secretRef:
+                name: hello-world
           ports:
             - name: http
               containerPort: 8080

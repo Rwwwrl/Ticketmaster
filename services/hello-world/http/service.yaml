@@ -1,11 +1,13 @@
 ---
-# Source: ticketmaster/templates/hello_world/service.yaml
+# Source: ticketmaster/templates/services/hello-world/http/service.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: hello-world
   labels:
     app: hello-world
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   type: ClusterIP
   ports:

@@ -1,8 +1,0 @@
----
-# Source: ticketmaster/templates/infra/ingress_class.yaml
-apiVersion: networking.k8s.io/v1
-kind: IngressClass
-metadata:
-  name: alb
-spec:
-  controller: eks.amazonaws.com/alb
