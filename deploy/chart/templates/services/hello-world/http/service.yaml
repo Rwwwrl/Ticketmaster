@@ -5,7 +5,7 @@ metadata:
   labels:
     app: hello-world
   annotations:
-    argocd.argoproj.io/sync-wave: {{ .Values.helloWorld.argocd.syncWave | quote }}
+    argocd.argoproj.io/sync-wave: {{ .Values.services.helloWorld.meta.argocd.syncWave | quote }}
 spec:
   type: ClusterIP
   ports:

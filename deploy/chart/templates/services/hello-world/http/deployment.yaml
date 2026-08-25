@@ -5,9 +5,9 @@ metadata:
   labels:
     app: hello-world
   annotations:
-    argocd.argoproj.io/sync-wave: {{ .Values.helloWorld.argocd.syncWave | quote }}
+    argocd.argoproj.io/sync-wave: {{ .Values.services.helloWorld.meta.argocd.syncWave | quote }}
 spec:
-  replicas: {{ .Values.helloWorld.replicas }}
+  replicas: {{ .Values.services.helloWorld.http.replicas }}
   strategy:
     type: RollingUpdate
   selector:
@@ -28,7 +28,7 @@ spec:
               app: hello-world
       containers:
         - name: hello-world
-          image: '{{ .Values.helloWorld.image.repository }}:{{ required "commitSha must be set (--set commitSha=$GITHUB_SHA)" .Values.commitSha }}'
+          image: '{{ .Values.services.helloWorld.image.repository }}:{{ required "commitSha must be set (--set commitSha=$GITHUB_SHA)" .Values.commitSha }}'
           command: ["poetry", "run", "uvicorn"]
           args:
             - "hello_world.main:app"

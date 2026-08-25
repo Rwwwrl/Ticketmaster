@@ -1,21 +1,24 @@
 commitSha: ""
 
-aws:
-  region: ""
-
 infra:
-  argocd:
-    syncWave: -10
+  meta:
+    argocd:
+      syncWave: 0
+    region: ""
+  externalSecrets:
+    serviceAccount:
+      roleArn: ""
+  services:
+    helloWorld:
+      secrets:
+        prefix: ""
 
-eso:
-  serviceAccount:
-    roleArn: ""
-
-helloWorld:
-  argocd:
-    syncWave: 0
-  replicas: 1
-  image:
-    repository: ""
-  secrets:
-    prefix: ""
+services:
+  helloWorld:
+    meta:
+      argocd:
+        syncWave: 0
+    image:
+      repository: ""
+    http:
+      replicas: 1
