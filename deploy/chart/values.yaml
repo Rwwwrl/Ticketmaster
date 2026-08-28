@@ -12,9 +12,6 @@ infra:
     secrets:
       prefix: ""
   services:
-    helloWorld:
-      secrets:
-        prefix: ""
     ticketmaster:
       secrets:
         prefix: ""
@@ -34,23 +31,6 @@ ingress:
       syncWave: 0
 
 services:
-  helloWorld:
-    meta:
-      argocd:
-        syncWave: 0
-    image:
-      repository: ""
-    http:
-      replicas: 1
-    migrations:
-      expand:
-        meta:
-          argocd:
-            syncWave: 0
-      contract:
-        meta:
-          argocd:
-            syncWave: 0
   ticketmaster:
     meta:
       argocd:

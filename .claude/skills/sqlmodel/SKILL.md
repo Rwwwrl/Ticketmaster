@@ -31,7 +31,7 @@ Always open an explicit `session.begin()` transaction at the route or entrypoint
 
 ## Define Models
 
-- Keep service models flat in `src/<service>/<package>/models.py` (e.g. `src/ticketmaster/ticketmaster/models.py`, `src/hello_world/hello_world/models.py`).
+- Keep service models flat in `src/<service>/<package>/models.py` (e.g. `src/ticketmaster/ticketmaster/models.py`).
 - Inherit `libs.sqlmodel_ext.BaseSqlModel` and set `table=True`.
 - Use `Field` for model fields and foreign keys.
 - Keep fields required unless nullability is part of the real lifecycle.
@@ -73,7 +73,7 @@ Every schema change requires an Alembic revision under:
 - `migrations/versions/expand/` for additive or backward-compatible changes
 - `migrations/versions/contract/` for destructive cleanup after compatible code is deployed
 
-Generate from the service context — both `src/ticketmaster` and `src/hello_world` are valid `-C` targets:
+Generate from the service context — `src/ticketmaster` is a valid `-C` target:
 
 ```bash
 poetry -C src/ticketmaster run alembic revision --autogenerate -m "<message>" --head expand@head --version-path migrations/versions/expand
@@ -81,9 +81,9 @@ poetry -C src/ticketmaster run alembic revision --autogenerate -m "<message>" --
 
 Use the corresponding `contract@head` and contract directory for contract changes. Autogeneration requires a reachable configured database.
 
-Review the generated operations manually. Metadata-based tests do not prove the migration works. Keep the service's models module imported in `migrations/env.py` (e.g. `ticketmaster.models`, `hello_world.models`). Existing downgrades are intentionally no-op; do not invent a destructive rollback without an explicit project decision.
+Review the generated operations manually. Metadata-based tests do not prove the migration works. Keep the service's models module imported in `migrations/env.py` (e.g. `ticketmaster.models`). Existing downgrades are intentionally no-op; do not invent a destructive rollback without an explicit project decision.
 
-Production applies `expand@head` before the rollout and `contract@head` only after the new service is healthy. Preserve that order and design migrations for mixed old/new pods. This is enforced with two Argo CD sync-wave-ordered Jobs either side of the Deployment's wave, for every deployed service (`hello_world` and `ticketmaster` — see the `deployment` skill).
+Production applies `expand@head` before the rollout and `contract@head` only after the new service is healthy. Preserve that order and design migrations for mixed old/new pods. This is enforced with two Argo CD sync-wave-ordered Jobs either side of the Deployment's wave, for every deployed service (`ticketmaster` today — see the `deployment` skill).
 
 ## Test Persistence
 

@@ -39,4 +39,3 @@ configs:
   init_sql:
     content: |
       CREATE DATABASE ticketmaster;
-      CREATE DATABASE hello_world;
