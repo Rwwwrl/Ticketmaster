@@ -1,11 +1,11 @@
 ---
-# Source: ticketmaster/templates/services/hello-world/migrations/expand/job.yaml
+# Source: ticketmaster/templates/services/ticketmaster/migrations/expand/job.yaml
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: hello-world-migrate-expand
+  name: ticketmaster-migrate-expand
   labels:
-    app: hello-world-migrate-expand
+    app: ticketmaster-migrate-expand
   annotations:
     argocd.argoproj.io/sync-wave: "-5"
     argocd.argoproj.io/sync-options: Force=true,Replace=true
@@ -15,16 +15,16 @@ spec:
   template:
     metadata:
       labels:
-        app: hello-world-migrate-expand
+        app: ticketmaster-migrate-expand
     spec:
       restartPolicy: Never
       containers:
         - name: migrate
-          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/hello-world:07924d30f0a9100682944d35b2126bf8b97c5e08'
+          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/ticketmaster:07924d30f0a9100682944d35b2126bf8b97c5e08'
           command: ["poetry", "run", "alembic", "upgrade", "expand@head"]
           envFrom:
             - secretRef:
-                name: hello-world
+                name: ticketmaster
           resources:
             requests:
               cpu: 50m
