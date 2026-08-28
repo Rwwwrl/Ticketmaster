@@ -1,4 +1,4 @@
-"""Endpoint contract tests for GET /v1/me/. Auth dependency is bypassed via dependency_overrides;
+"""Endpoint contract tests for GET /api/v1/me/. Auth dependency is bypassed via dependency_overrides;
 JWT validation has its own coverage in test_dependencies.py."""
 
 from collections.abc import Iterator
@@ -37,7 +37,7 @@ async def test_get_me_when_signed_in_returns_200(
     async_client: AsyncClient,
     signed_in_user: BaseUserDTO,
 ) -> None:
-    response = await async_client.get(url="/v1/me/", headers={"Authorization": "Bearer fake"})
+    response = await async_client.get(url="/api/v1/me/", headers={"Authorization": "Bearer fake"})
 
     assert response.status_code == 200
     body = response.json()
@@ -51,7 +51,7 @@ async def test_get_me_when_signed_in_returns_200(
 async def test_get_me_when_missing_authorization_header_returns_422(
     async_client: AsyncClient,
 ) -> None:
-    response = await async_client.get(url="/v1/me/")
+    response = await async_client.get(url="/api/v1/me/")
 
     assert response.status_code == 422
 
@@ -61,6 +61,6 @@ async def test_get_me_when_invalid_jwt_returns_401(
     async_client: AsyncClient,
     invalid_jwt: None,
 ) -> None:
-    response = await async_client.get(url="/v1/me/", headers={"Authorization": "Bearer invalid"})
+    response = await async_client.get(url="/api/v1/me/", headers={"Authorization": "Bearer invalid"})
 
     assert response.status_code == 401

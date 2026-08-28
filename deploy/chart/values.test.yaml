@@ -6,6 +6,9 @@ infra:
   externalSecrets:
     serviceAccount:
       roleArn: arn:aws:iam::258167965416:role/ticketmaster-test-eu-eso
+  frontend:
+    secrets:
+      prefix: ticketmaster/frontend/test-eu
   services:
     helloWorld:
       secrets:
@@ -13,6 +16,20 @@ infra:
     ticketmaster:
       secrets:
         prefix: ticketmaster/ticketmaster/test-eu
+
+frontend:
+  meta:
+    argocd:
+      syncWave: 0
+  image:
+    repository: 258167965416.dkr.ecr.eu-central-1.amazonaws.com/frontend
+  http:
+    replicas: 1
+
+ingress:
+  meta:
+    argocd:
+      syncWave: 0
 
 services:
   helloWorld:

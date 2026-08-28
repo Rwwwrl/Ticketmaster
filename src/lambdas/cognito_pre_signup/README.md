@@ -1,6 +1,6 @@
 # Cognito PreSignUp Lambda
 
-Synchronous blocking trigger fired by Cognito *before* it persists a new user. Calls `POST /v1/users/` on the ticketmaster backend, signing a short-lived (60 s) PS256 JWT via `kms:Sign`. Backend rejection → Cognito rejects sign-up → end user sees the error → no Cognito identity, no DB row.
+Synchronous blocking trigger fired by Cognito *before* it persists a new user. Calls `POST /api/v1/users/` on the ticketmaster backend, signing a short-lived (60 s) PS256 JWT via `kms:Sign`. Backend rejection → Cognito rejects sign-up → end user sees the error → no Cognito identity, no DB row.
 
 ## Layout
 

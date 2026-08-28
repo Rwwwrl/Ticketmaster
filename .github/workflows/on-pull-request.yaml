@@ -58,7 +58,7 @@ jobs:
         run: pip install cfn-lint==1.*
 
       - name: Lint CloudFormation templates
-        run: cfn-lint frontend/service.yaml
+        run: cfn-lint src/lambdas/cognito_pre_signup/lambda.yaml
 
   validate_manifests:
     runs-on: ubuntu-latest

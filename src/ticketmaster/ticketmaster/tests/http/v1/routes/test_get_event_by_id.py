@@ -18,7 +18,7 @@ async def test_get_event_by_id_when_event_exists(async_client: AsyncClient) -> N
     )
     await insert(event)
 
-    response = await async_client.get(url=f"/v1/events/{event.id}")
+    response = await async_client.get(url=f"/api/v1/events/{event.id}")
 
     assert response.status_code == 200
     content = EventResponseSchema(**response.json())
@@ -31,7 +31,7 @@ async def test_get_event_by_id_when_event_exists(async_client: AsyncClient) -> N
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_get_event_by_id_when_event_does_not_exist(async_client: AsyncClient) -> None:
-    response = await async_client.get(url="/v1/events/999999")
+    response = await async_client.get(url="/api/v1/events/999999")
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Event not found"}

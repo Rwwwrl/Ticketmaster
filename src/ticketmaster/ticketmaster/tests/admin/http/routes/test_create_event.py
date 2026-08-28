@@ -25,7 +25,7 @@ async def test_create_event_when_valid_payload_returns_201_and_persists(
         "currency": CurrencyEnum.EUR,
     }
 
-    response = await async_client.post(url="/admin/events/", json=payload)
+    response = await async_client.post(url="/api/admin/events/", json=payload)
 
     assert response.status_code == 201
     body = EventResponseSchema(**response.json())
@@ -57,7 +57,7 @@ async def test_create_event_when_missing_field_returns_422(async_client: AsyncCl
         "start_at": datetime(2026, 6, 2, 20, 0, tzinfo=UTC).isoformat(),
     }
 
-    response = await async_client.post(url="/admin/events/", json=payload)
+    response = await async_client.post(url="/api/admin/events/", json=payload)
 
     assert response.status_code == 422
 
@@ -78,7 +78,7 @@ async def test_create_event_rotates_list_events_page_namespace(
         "currency": CurrencyEnum.EUR,
     }
 
-    response = await async_client.post(url="/admin/events/", json=payload)
+    response = await async_client.post(url="/api/admin/events/", json=payload)
     current_namespace = await NamespaceRepository.get(redis=redis)
 
     assert response.status_code == 201

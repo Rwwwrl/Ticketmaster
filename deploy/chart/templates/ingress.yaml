@@ -3,20 +3,27 @@ kind: Ingress
 metadata:
   name: ticketmaster
   annotations:
-    argocd.argoproj.io/sync-wave: {{ .Values.services.ticketmaster.meta.argocd.syncWave | quote }}
+    argocd.argoproj.io/sync-wave: {{ .Values.ingress.meta.argocd.syncWave | quote }}
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/healthcheck-path: /readiness-check
-    alb.ingress.kubernetes.io/target-group-attributes: deregistration_delay.timeout_seconds=30
+    alb.ingress.kubernetes.io/target-group-attributes: deregistration_delay.timeout_seconds=10
 spec:
   ingressClassName: alb
   rules:
     - http:
         paths:
-          - path: /
+          - path: /api
             pathType: Prefix
             backend:
               service:
                 name: ticketmaster
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
                 port:
                   number: 80

@@ -8,6 +8,9 @@ infra:
   externalSecrets:
     serviceAccount:
       roleArn: ""
+  frontend:
+    secrets:
+      prefix: ""
   services:
     helloWorld:
       secrets:
@@ -15,6 +18,20 @@ infra:
     ticketmaster:
       secrets:
         prefix: ""
+
+frontend:
+  meta:
+    argocd:
+      syncWave: 0
+  image:
+    repository: ""
+  http:
+    replicas: 1
+
+ingress:
+  meta:
+    argocd:
+      syncWave: 0
 
 services:
   helloWorld:

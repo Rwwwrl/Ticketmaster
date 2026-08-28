@@ -47,7 +47,7 @@ async def test_list_events_page_warms_cache_on_first_request(
 
     assert await redis.exists(EventCacheRepository._cache_key(event_id=event.id, version=settings.version)) == 0
 
-    response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
+    response = await async_client.get(url="/api/v1/events/", params={"sort_key": "start_at"})
 
     assert response.status_code == 200
     assert await redis.exists(EventCacheRepository._cache_key(event_id=event.id, version=settings.version)) == 1
@@ -66,13 +66,13 @@ async def test_list_events_page_serves_from_cache_when_db_row_changes_underneath
     )
     await insert(event)
 
-    warmup_response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
+    warmup_response = await async_client.get(url="/api/v1/events/", params={"sort_key": "start_at"})
     assert warmup_response.status_code == 200
 
     async with Session() as session, session.begin():
         await session.exec(update(Event).where(Event.id == event.id).values(name="Modified Name"))
 
-    second_response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
+    second_response = await async_client.get(url="/api/v1/events/", params={"sort_key": "start_at"})
     second_page = EventsPageResponseSchema(**second_response.json())
 
     assert second_response.status_code == 200
@@ -95,7 +95,7 @@ async def test_list_events_page_backfills_on_partial_cache_miss(
     )
     assert await redis.exists(EventCacheRepository._cache_key(event_id=second.id, version=settings.version)) == 0
 
-    response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
+    response = await async_client.get(url="/api/v1/events/", params={"sort_key": "start_at"})
     page = EventsPageResponseSchema(**response.json())
 
     assert response.status_code == 200
@@ -119,7 +119,7 @@ async def test_list_events_page_backfills_when_cache_document_is_stale(
         value=json.dumps(stale_payload),
     )
 
-    response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
+    response = await async_client.get(url="/api/v1/events/", params={"sort_key": "start_at"})
     page = EventsPageResponseSchema(**response.json())
 
     assert response.status_code == 200
@@ -144,7 +144,7 @@ async def test_list_events_page_ignores_other_version_cache_keys(
     await redis.set(name=other_version_key, value=cache_document.model_dump_json())
     assert await redis.exists(EventCacheRepository._cache_key(event_id=event.id, version=settings.version)) == 0
 
-    response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
+    response = await async_client.get(url="/api/v1/events/", params={"sort_key": "start_at"})
     page = EventsPageResponseSchema(**response.json())
 
     assert response.status_code == 200
@@ -175,7 +175,7 @@ async def test_list_events_page_falls_through_to_db_when_redis_errors(
     monkeypatch.setattr(redis, "mget", _failing_mget)
     monkeypatch.setattr(redis, "pipeline", _failing_pipeline)
 
-    response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
+    response = await async_client.get(url="/api/v1/events/", params={"sort_key": "start_at"})
     page = EventsPageResponseSchema(**response.json())
 
     assert response.status_code == 200
@@ -192,7 +192,7 @@ async def test_list_events_page_warms_and_reuses_page_cache(
     await insert(event)
     namespace = await NamespaceRepository.set(redis=redis)
 
-    first_response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
+    first_response = await async_client.get(url="/api/v1/events/", params={"sort_key": "start_at"})
     key = ListEventsPageServiceCacheRepository.cache_key(
         service_name=list_events_page.__name__,
         version=settings.version,
@@ -209,7 +209,7 @@ async def test_list_events_page_warms_and_reuses_page_cache(
 
     monkeypatch.setattr(EventRepository, "list_ids_paginated", _unexpected_database_query)
 
-    second_response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
+    second_response = await async_client.get(url="/api/v1/events/", params={"sort_key": "start_at"})
 
     assert second_response.status_code == 200
     assert second_response.json() == first_response.json()
@@ -233,7 +233,7 @@ async def test_list_events_page_recomputes_page_with_malformed_service_cache(
     )
     await redis.set(name=key, value=json.dumps({"events_ids": "invalid", "next_cursor": None}))
 
-    response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
+    response = await async_client.get(url="/api/v1/events/", params={"sort_key": "start_at"})
     restored = await ListEventsPageServiceCacheRepository.get(
         redis=redis,
         key=key,
@@ -251,13 +251,13 @@ async def test_list_events_page_old_cursor_populates_current_namespace(
     events = [EventFactory(start_at=datetime(2026, 5, day, tzinfo=UTC)) for day in range(1, 22)]
     await insert(*events)
     old_namespace = await NamespaceRepository.set(redis=redis)
-    first_response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
+    first_response = await async_client.get(url="/api/v1/events/", params={"sort_key": "start_at"})
     first_page = EventsPageResponseSchema(**first_response.json())
     assert first_page.next_cursor is not None
 
     current_namespace = await NamespaceRepository.set(redis=redis)
     second_response = await async_client.get(
-        url="/v1/events/",
+        url="/api/v1/events/",
         params={"sort_key": "start_at", "cursor": first_page.next_cursor},
     )
     current_key = ListEventsPageServiceCacheRepository.cache_key(
@@ -293,7 +293,7 @@ async def test_list_events_page_caches_only_first_five_pages(
     events = [EventFactory(start_at=datetime(2026, 5, 1, hour=index, tzinfo=UTC)) for index in range(21)]
     await insert(*events)
     namespace = await NamespaceRepository.set(redis=redis)
-    first_response = await async_client.get(url="/v1/events/", params={"sort_key": "start_at"})
+    first_response = await async_client.get(url="/api/v1/events/", params={"sort_key": "start_at"})
     first_page = EventsPageResponseSchema(**first_response.json())
     assert first_page.next_cursor is not None
 
@@ -315,7 +315,7 @@ async def test_list_events_page_caches_only_first_five_pages(
         ),
     )
     response = await async_client.get(
-        url="/v1/events/",
+        url="/api/v1/events/",
         params={"sort_key": "start_at", "cursor": cursor},
     )
     key = ListEventsPageServiceCacheRepository.cache_key(

@@ -19,7 +19,7 @@ _EVENT = {
     "request": {"userAttributes": {"email": "alice@example.com"}},
 }
 
-_BACKEND_URL = "https://ticketmaster.test.invalid/v1/users/"
+_BACKEND_URL = "https://ticketmaster.test.invalid/api/v1/users/"
 
 
 def _make_keypair() -> RSAPrivateKey:

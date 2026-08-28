@@ -18,7 +18,7 @@ async def test_delete_event_when_event_has_no_tickets_returns_204_and_deletes_ev
     event = EventFactory()
     await insert(event)
 
-    response = await async_client.delete(url=f"/admin/events/{event.id}")
+    response = await async_client.delete(url=f"/api/admin/events/{event.id}")
 
     assert response.status_code == 204
     assert response.content == b""
@@ -37,7 +37,7 @@ async def test_delete_event_when_event_not_found_returns_404_and_keeps_namespace
 ) -> None:
     previous_namespace = await NamespaceRepository.set(redis=redis)
 
-    response = await async_client.delete(url="/admin/events/999999")
+    response = await async_client.delete(url="/api/admin/events/999999")
     current_namespace = await NamespaceRepository.get(redis=redis)
 
     assert response.status_code == 404
@@ -57,7 +57,7 @@ async def test_delete_event_when_event_has_ticket_returns_409_and_preserves_data
     await insert(ticket)
     previous_namespace = await NamespaceRepository.set(redis=redis)
 
-    response = await async_client.delete(url=f"/admin/events/{event.id}")
+    response = await async_client.delete(url=f"/api/admin/events/{event.id}")
     current_namespace = await NamespaceRepository.get(redis=redis)
 
     assert response.status_code == 409
@@ -82,7 +82,7 @@ async def test_delete_event_rotates_list_events_page_namespace(
     await insert(event)
     previous_namespace = await NamespaceRepository.set(redis=redis)
 
-    response = await async_client.delete(url=f"/admin/events/{event.id}")
+    response = await async_client.delete(url=f"/api/admin/events/{event.id}")
     current_namespace = await NamespaceRepository.get(redis=redis)
 
     assert response.status_code == 204

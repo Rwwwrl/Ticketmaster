@@ -8,6 +8,7 @@ from libs.fastapi_ext.middlewares import (
     RequestBodyLimitMiddleware,
     RequestIdMiddleware,
     RequestResponseLoggingMiddleware,
+    RequestTimeoutMiddleware,
     SecurityHeadersMiddleware,
     UnhandledExceptionMiddleware,
 )
@@ -65,12 +66,13 @@ app = FastAPI(
     version=settings.version,
     description="Ticketmaster monolith service.",
     lifespan=lifespan,
-    docs_url=None if _is_sensitive else "/docs",
-    redoc_url=None if _is_sensitive else "/redoc",
-    openapi_url=None if _is_sensitive else "/openapi.json",
+    docs_url=None if _is_sensitive else "/api/docs",
+    redoc_url=None if _is_sensitive else "/api/redoc",
+    openapi_url=None if _is_sensitive else "/api/openapi.json",
 )
 
 app.add_middleware(UnhandledExceptionMiddleware)
+app.add_middleware(RequestTimeoutMiddleware, timeout_seconds=10)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestResponseLoggingMiddleware)
 app.add_middleware(RequestIdMiddleware)
@@ -89,5 +91,5 @@ async def readiness_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
-app.include_router(router=v1_router, prefix="/v1")
-app.include_router(router=admin_router, prefix="/admin")
+app.include_router(router=v1_router, prefix="/api/v1")
+app.include_router(router=admin_router, prefix="/api/admin")

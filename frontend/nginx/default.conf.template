@@ -2,9 +2,9 @@ server {
     listen 80;
     server_name _;
 
-    # /api/* → backend service (single-origin trick that avoids CORS)
+    # /api/* → backend service, path forwarded verbatim (the backend serves /api/... natively)
     location /api/ {
-        proxy_pass            ${BACKEND_URL}/;
+        proxy_pass            ${BACKEND_URL};
         proxy_ssl_server_name on;
         proxy_set_header      Host              $proxy_host;
         proxy_set_header      X-Real-IP         $remote_addr;
@@ -12,8 +12,8 @@ server {
         proxy_set_header      X-Forwarded-Proto $scheme;
     }
 
-    # ECS target-group health probe
-    location = /readiness_check {
+    # ALB target-group / pod probe health check
+    location = /readiness-check {
         access_log off;
         return 200 'ok';
         add_header Content-Type text/plain;

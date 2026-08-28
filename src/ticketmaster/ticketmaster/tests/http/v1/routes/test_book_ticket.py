@@ -1,4 +1,4 @@
-"""Endpoint contract tests for POST /v1/events/{event_id}/tickets/{ticket_id}/book.
+"""Endpoint contract tests for POST /api/v1/events/{event_id}/tickets/{ticket_id}/book.
 Auth dependency is bypassed via dependency_overrides; JWT validation has its own coverage
 in test_dependencies.py."""
 
@@ -32,7 +32,7 @@ async def test_book_ticket_when_fresh_reservation_by_caller_returns_204(
     await insert(ticket)
 
     before = utc_now()
-    response = await async_client.post(url=f"/v1/events/{event.id}/tickets/{ticket.id}/book")
+    response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/book")
     after = utc_now()
 
     assert response.status_code == 204
@@ -63,7 +63,7 @@ async def test_book_ticket_when_reservation_expired_returns_400(
     )
     await insert(ticket)
 
-    response = await async_client.post(url=f"/v1/events/{event.id}/tickets/{ticket.id}/book")
+    response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/book")
 
     assert response.status_code == 400
     assert response.json() == {"detail": "Ticket not bookable"}
@@ -93,7 +93,7 @@ async def test_book_ticket_when_reserved_by_other_user_returns_400(
     )
     await insert(ticket)
 
-    response = await async_client.post(url=f"/v1/events/{event.id}/tickets/{ticket.id}/book")
+    response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/book")
 
     assert response.status_code == 400
 
@@ -115,7 +115,7 @@ async def test_book_ticket_when_ticket_is_available_returns_400(
     ticket = TicketFactory(event_id=event.id)
     await insert(ticket)
 
-    response = await async_client.post(url=f"/v1/events/{event.id}/tickets/{ticket.id}/book")
+    response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/book")
 
     assert response.status_code == 400
 
@@ -143,7 +143,7 @@ async def test_book_ticket_when_already_booked_returns_400(
     )
     await insert(ticket)
 
-    response = await async_client.post(url=f"/v1/events/{event.id}/tickets/{ticket.id}/book")
+    response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/book")
 
     assert response.status_code == 400
 
@@ -171,7 +171,7 @@ async def test_book_ticket_when_path_event_id_does_not_match_returns_400(
     )
     await insert(ticket)
 
-    response = await async_client.post(url=f"/v1/events/{wrong_event.id}/tickets/{ticket.id}/book")
+    response = await async_client.post(url=f"/api/v1/events/{wrong_event.id}/tickets/{ticket.id}/book")
 
     assert response.status_code == 400
 
@@ -190,7 +190,7 @@ async def test_book_ticket_when_ticket_does_not_exist_returns_400(
     event = EventFactory()
     await insert(override_user_jwt, event)
 
-    response = await async_client.post(url=f"/v1/events/{event.id}/tickets/999999/book")
+    response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/999999/book")
 
     assert response.status_code == 400
 
@@ -205,10 +205,10 @@ async def test_reserve_then_book_two_step_flow_returns_204(
     ticket = TicketFactory(event_id=event.id)
     await insert(ticket)
 
-    reserve_response = await async_client.post(url=f"/v1/events/{event.id}/tickets/{ticket.id}/reserve")
+    reserve_response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/reserve")
     assert reserve_response.status_code == 204
 
-    book_response = await async_client.post(url=f"/v1/events/{event.id}/tickets/{ticket.id}/book")
+    book_response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/book")
     assert book_response.status_code == 204
 
     async with Session() as session, session.begin():
