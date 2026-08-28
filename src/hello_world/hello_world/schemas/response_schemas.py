@@ -6,3 +6,4 @@ class HelloWorldResponseSchema(BaseResponseSchema):
     message: str
     environment: EnvironmentEnum
     secret_fingerprint: str
+    visit_count: int

@@ -22,3 +22,12 @@ services:
       repository: ""
     http:
       replicas: 1
+    migrations:
+      expand:
+        meta:
+          argocd:
+            syncWave: 0
+      contract:
+        meta:
+          argocd:
+            syncWave: 0

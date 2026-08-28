@@ -45,6 +45,7 @@ env = [
 testpaths = [
     "src/libs/libs/tests",
     "src/ticketmaster/ticketmaster/tests",
+    "src/hello_world/hello_world/tests",
     "src/lambdas/cognito_pre_signup/tests",
 ]
 

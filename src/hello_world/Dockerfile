@@ -14,6 +14,8 @@ RUN --mount=type=secret,id=codeartifact_token \
     poetry install --no-root --only main
 
 COPY hello_world/ ./hello_world/
+COPY alembic.ini ./
+COPY migrations/ ./migrations/
 RUN poetry install --only main
 
 EXPOSE 8080
