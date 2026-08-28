@@ -44,7 +44,6 @@ jobs:
             --output text)
 
           images=(
-            "hello-world:src/hello_world"
             "ticketmaster:src/ticketmaster"
             "frontend:frontend"
           )

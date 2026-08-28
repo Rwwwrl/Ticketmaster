@@ -104,7 +104,6 @@ ipython_config.py
 #   ticketmaster-libs fresh from CodeArtifact (and never copy these locks), and local dev uses
 #   the root workspace lock. A committed service lock can't be kept consistent offline.
 /src/ticketmaster/poetry.lock
-/src/hello_world/poetry.lock
 
 # pdm
 #   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
