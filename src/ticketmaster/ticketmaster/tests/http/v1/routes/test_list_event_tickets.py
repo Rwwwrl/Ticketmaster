@@ -1,4 +1,4 @@
-"""Endpoint contract tests for GET /v1/events/{event_id}/tickets/. Public route — no auth."""
+"""Endpoint contract tests for GET /api/v1/events/{event_id}/tickets/. Public route — no auth."""
 
 from datetime import UTC, datetime
 
@@ -17,7 +17,7 @@ async def test_list_event_tickets_when_event_has_no_tickets_returns_empty_list(
     event = EventFactory()
     await insert(event)
 
-    response = await async_client.get(url=f"/v1/events/{event.id}/tickets/")
+    response = await async_client.get(url=f"/api/v1/events/{event.id}/tickets/")
 
     assert response.status_code == 200
     assert response.json() == []
@@ -27,7 +27,7 @@ async def test_list_event_tickets_when_event_has_no_tickets_returns_empty_list(
 async def test_list_event_tickets_when_unknown_event_id_returns_empty_list(
     async_client: AsyncClient,
 ) -> None:
-    response = await async_client.get(url="/v1/events/999999/tickets/")
+    response = await async_client.get(url="/api/v1/events/999999/tickets/")
 
     assert response.status_code == 200
     assert response.json() == []
@@ -58,7 +58,7 @@ async def test_list_event_tickets_when_event_has_tickets_returns_ordered_by_id(
     )
     await insert(available_ticket, reserved_ticket, booked_ticket)
 
-    response = await async_client.get(url=f"/v1/events/{event.id}/tickets/")
+    response = await async_client.get(url=f"/api/v1/events/{event.id}/tickets/")
 
     assert response.status_code == 200
     items = [TicketResponseSchema(**item) for item in response.json()]
@@ -83,7 +83,7 @@ async def test_list_event_tickets_filters_to_requested_event(
     other_ticket = TicketFactory(event_id=other_event.id)
     await insert(requested_ticket, other_ticket)
 
-    response = await async_client.get(url=f"/v1/events/{requested_event.id}/tickets/")
+    response = await async_client.get(url=f"/api/v1/events/{requested_event.id}/tickets/")
 
     assert response.status_code == 200
     items = [TicketResponseSchema(**item) for item in response.json()]

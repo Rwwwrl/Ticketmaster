@@ -29,7 +29,7 @@ async def test_update_event_when_single_field_returns_200_and_only_changes_that_
     await insert(event)
     original_updated_at = event.updated_at
 
-    response = await async_client.patch(url=f"/admin/events/{event.id}", json={"name": "Coldplay — Rescheduled"})
+    response = await async_client.patch(url=f"/api/admin/events/{event.id}", json={"name": "Coldplay — Rescheduled"})
 
     assert response.status_code == 200
     body = EventResponseSchema(**response.json())
@@ -65,7 +65,7 @@ async def test_update_event_when_all_fields_returns_200_and_updates_all(
         "start_at": datetime(2026, 7, 1, 18, 0, tzinfo=UTC).isoformat(),
     }
 
-    response = await async_client.patch(url=f"/admin/events/{event.id}", json=payload)
+    response = await async_client.patch(url=f"/api/admin/events/{event.id}", json=payload)
 
     assert response.status_code == 200
     body = EventResponseSchema(**response.json())
@@ -94,7 +94,7 @@ async def test_update_event_when_cached_keeps_cache_entry_until_ttl(
     key = EventCacheRepository._cache_key(event_id=event.id, version=settings.version)
     assert await redis.get(name=key) is not None
 
-    response = await async_client.patch(url=f"/admin/events/{event.id}", json={"name": "Coldplay — Rescheduled"})
+    response = await async_client.patch(url=f"/api/admin/events/{event.id}", json={"name": "Coldplay — Rescheduled"})
     raw = await redis.get(name=key)
 
     assert response.status_code == 200
@@ -105,7 +105,7 @@ async def test_update_event_when_cached_keeps_cache_entry_until_ttl(
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_update_event_when_not_found_returns_404(async_client: AsyncClient, bypass_admin_jwt: None) -> None:
-    response = await async_client.patch(url="/admin/events/999999", json={"name": "Nope"})
+    response = await async_client.patch(url="/api/admin/events/999999", json={"name": "Nope"})
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Event not found"}
@@ -121,7 +121,7 @@ async def test_update_event_rotates_list_events_page_namespace(
     await insert(event)
     previous_namespace = await NamespaceRepository.set(redis=redis)
 
-    response = await async_client.patch(url=f"/admin/events/{event.id}", json={"name": "Updated"})
+    response = await async_client.patch(url=f"/api/admin/events/{event.id}", json={"name": "Updated"})
     current_namespace = await NamespaceRepository.get(redis=redis)
 
     assert response.status_code == 200

@@ -29,8 +29,8 @@ async def fastapi_app(sqlmodel_engine: AsyncEngine, redis: Redis) -> AsyncGenera
     app = FastAPI()
     app.state.sqlmodel_engine = sqlmodel_engine
     app.state.redis = redis
-    app.include_router(router=v1_router, prefix="/v1")
-    app.include_router(router=admin_router, prefix="/admin")
+    app.include_router(router=v1_router, prefix="/api/v1")
+    app.include_router(router=admin_router, prefix="/api/admin")
     yield app
 
 

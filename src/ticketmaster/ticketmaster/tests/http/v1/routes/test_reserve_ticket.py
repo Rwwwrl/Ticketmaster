@@ -1,4 +1,4 @@
-"""Endpoint contract tests for POST /v1/events/{event_id}/tickets/{ticket_id}/reserve.
+"""Endpoint contract tests for POST /api/v1/events/{event_id}/tickets/{ticket_id}/reserve.
 Auth dependency is bypassed via dependency_overrides; JWT validation has its own coverage
 in test_dependencies.py."""
 
@@ -26,7 +26,7 @@ async def test_reserve_ticket_when_available_returns_204(
     await insert(ticket)
 
     before = utc_now()
-    response = await async_client.post(url=f"/v1/events/{event.id}/tickets/{ticket.id}/reserve")
+    response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/reserve")
     after = utc_now()
 
     assert response.status_code == 204
@@ -55,7 +55,7 @@ async def test_reserve_ticket_when_reserved_fresh_by_other_user_returns_400(
     )
     await insert(ticket)
 
-    response = await async_client.post(url=f"/v1/events/{event.id}/tickets/{ticket.id}/reserve")
+    response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/reserve")
 
     assert response.status_code == 400
     assert response.json() == {"detail": "Ticket not reservable"}
@@ -84,7 +84,7 @@ async def test_reserve_ticket_when_reserved_expired_returns_204(
     await insert(ticket)
 
     before = utc_now()
-    response = await async_client.post(url=f"/v1/events/{event.id}/tickets/{ticket.id}/reserve")
+    response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/reserve")
     after = utc_now()
 
     assert response.status_code == 204
@@ -112,7 +112,7 @@ async def test_reserve_ticket_when_booked_returns_400(
     )
     await insert(ticket)
 
-    response = await async_client.post(url=f"/v1/events/{event.id}/tickets/{ticket.id}/reserve")
+    response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/reserve")
 
     assert response.status_code == 400
     async with Session() as session, session.begin():
@@ -130,6 +130,6 @@ async def test_reserve_ticket_when_ticket_does_not_exist_returns_400(
     event = EventFactory()
     await insert(override_user_jwt, event)
 
-    response = await async_client.post(url=f"/v1/events/{event.id}/tickets/999999/reserve")
+    response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/999999/reserve")
 
     assert response.status_code == 400

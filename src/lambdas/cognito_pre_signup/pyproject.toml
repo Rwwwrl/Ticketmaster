@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "cognito-pre-signup-lambda"
 version = "0.1.0"
-description = "Cognito PreSignUp trigger — calls ticketmaster /v1/users/ to create the DB row before Cognito persists the identity."
+description = "Cognito PreSignUp trigger — calls ticketmaster /api/v1/users/ to create the DB row before Cognito persists the identity."
 authors = ["Aleksei Sosov <forgithublesh@yandex.ru>"]
 packages = [{ include = "cognito_pre_signup" }]
 

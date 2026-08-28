@@ -1,4 +1,4 @@
-"""Endpoint contract tests for DELETE /v1/me/. Auth dependency is bypassed via dependency_overrides;
+"""Endpoint contract tests for DELETE /api/v1/me/. Auth dependency is bypassed via dependency_overrides;
 Cognito client is monkey-patched on the shared aws_session singleton."""
 
 from collections.abc import AsyncIterator
@@ -71,7 +71,7 @@ async def test_delete_me_when_no_tickets_returns_204_and_deletes_user(
     signed_in_user_in_db: BaseUserDTO,
     mock_cognito: AsyncMock,
 ) -> None:
-    response = await async_client.delete(url="/v1/me/", headers={"Authorization": "Bearer fake"})
+    response = await async_client.delete(url="/api/v1/me/", headers={"Authorization": "Bearer fake"})
 
     assert response.status_code == 204
     mock_cognito.admin_delete_user.assert_awaited_once_with(
@@ -92,7 +92,7 @@ async def test_delete_me_when_user_has_reserved_tickets_releases_them(
 ) -> None:
     ticket_id = await _seed_ticket(user_id=signed_in_user_in_db.id, status_=TicketStatusEnum.RESERVED)
 
-    response = await async_client.delete(url="/v1/me/", headers={"Authorization": "Bearer fake"})
+    response = await async_client.delete(url="/api/v1/me/", headers={"Authorization": "Bearer fake"})
 
     assert response.status_code == 204
     async with Session() as session, session.begin():
@@ -110,7 +110,7 @@ async def test_delete_me_when_user_has_booked_tickets_marks_anonymous_booked(
 ) -> None:
     ticket_id = await _seed_ticket(user_id=signed_in_user_in_db.id, status_=TicketStatusEnum.BOOKED)
 
-    response = await async_client.delete(url="/v1/me/", headers={"Authorization": "Bearer fake"})
+    response = await async_client.delete(url="/api/v1/me/", headers={"Authorization": "Bearer fake"})
 
     assert response.status_code == 204
     async with Session() as session, session.begin():
@@ -124,6 +124,6 @@ async def test_delete_me_when_invalid_jwt_returns_401(
     async_client: AsyncClient,
     invalid_jwt: None,
 ) -> None:
-    response = await async_client.delete(url="/v1/me/", headers={"Authorization": "Bearer invalid"})
+    response = await async_client.delete(url="/api/v1/me/", headers={"Authorization": "Bearer invalid"})
 
     assert response.status_code == 401

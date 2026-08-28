@@ -11,7 +11,7 @@ async def test_search_events_when_match_returns_page_shape(async_client: AsyncCl
     noise = EventFactory(name="Lakers vs Celtics", description="NBA game")
     await insert(match, noise)
 
-    response = await async_client.get(url="/v1/events/search", params={"q": "coldplay"})
+    response = await async_client.get(url="/api/v1/events/search", params={"q": "coldplay"})
 
     assert response.status_code == 200
     page = EventsPageResponseSchema(**response.json())

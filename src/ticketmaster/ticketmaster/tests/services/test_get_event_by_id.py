@@ -33,7 +33,7 @@ async def test_get_event_by_id_warms_cache_on_first_request(
 
     assert await redis.exists(EventCacheRepository._cache_key(event_id=event.id, version=settings.version)) == 0
 
-    response = await async_client.get(url=f"/v1/events/{event.id}")
+    response = await async_client.get(url=f"/api/v1/events/{event.id}")
 
     assert response.status_code == 200
     assert EventResponseSchema(**response.json()).name == "Coldplay"
@@ -53,13 +53,13 @@ async def test_get_event_by_id_serves_from_cache_when_db_row_changes_underneath(
     )
     await insert(event)
 
-    warmup_response = await async_client.get(url=f"/v1/events/{event.id}")
+    warmup_response = await async_client.get(url=f"/api/v1/events/{event.id}")
     assert warmup_response.status_code == 200
 
     async with Session() as session, session.begin():
         await session.exec(update(Event).where(Event.id == event.id).values(name="Modified Name"))
 
-    second_response = await async_client.get(url=f"/v1/events/{event.id}")
+    second_response = await async_client.get(url=f"/api/v1/events/{event.id}")
 
     assert second_response.status_code == 200
     assert EventResponseSchema(**second_response.json()).name == "Original Name"
@@ -84,7 +84,7 @@ async def test_get_event_by_id_falls_through_to_db_when_cache_document_is_stale(
         value=json.dumps(stale_payload),
     )
 
-    response = await async_client.get(url=f"/v1/events/{event.id}")
+    response = await async_client.get(url=f"/api/v1/events/{event.id}")
 
     assert response.status_code == 200
     assert EventResponseSchema(**response.json()).name == "Stale Cache Show"
@@ -116,7 +116,7 @@ async def test_get_event_by_id_falls_through_to_db_when_redis_errors(
     monkeypatch.setattr(redis, "get", _failing_get)
     monkeypatch.setattr(redis, "set", _failing_set)
 
-    response = await async_client.get(url=f"/v1/events/{event.id}")
+    response = await async_client.get(url=f"/api/v1/events/{event.id}")
 
     assert response.status_code == 200
     assert EventResponseSchema(**response.json()).id == event.id

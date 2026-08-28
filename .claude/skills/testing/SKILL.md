@@ -92,7 +92,7 @@ For endpoint changes, cover:
 Parse response JSON into the declared Pydantic response schema before field assertions:
 
 ```python
-response = await async_client.get(url="/v1/events/1")
+response = await async_client.get(url="/api/v1/events/1")
 
 assert response.status_code == 200
 body = EventResponseSchema(**response.json())

@@ -64,7 +64,7 @@ def _is_retryable(exc: BaseException) -> bool:
 )
 def _post_to_backend(payload: dict) -> None:
     response = httpx.post(
-        url=f"{API_URL}/v1/users/",
+        url=f"{API_URL}/api/v1/users/",
         json=payload,
         headers={"Authorization": f"Bearer {_build_jwt()}"},
         timeout=TIMEOUT_SECONDS,
