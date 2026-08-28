@@ -1,11 +1,11 @@
 ---
-# Source: ticketmaster/templates/services/hello-world/http/deployment.yaml
+# Source: ticketmaster/templates/frontend/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hello-world
+  name: frontend
   labels:
-    app: hello-world
+    app: frontend
   annotations:
     argocd.argoproj.io/sync-wave: "0"
 spec:
@@ -14,11 +14,11 @@ spec:
     type: RollingUpdate
   selector:
     matchLabels:
-      app: hello-world
+      app: frontend
   template:
     metadata:
       labels:
-        app: hello-world
+        app: frontend
     spec:
       terminationGracePeriodSeconds: 90
       topologySpreadConstraints:
@@ -27,25 +27,16 @@ spec:
           whenUnsatisfiable: DoNotSchedule
           labelSelector:
             matchLabels:
-              app: hello-world
+              app: frontend
       containers:
-        - name: hello-world
-          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/hello-world:76316e61adb135ed0e3e5827abee4a4819d5f933'
-          command: ["poetry", "run", "uvicorn"]
-          args:
-            - "hello_world.main:app"
-            - "--host"
-            - "0.0.0.0"
-            - "--port"
-            - "8080"
-            - "--timeout-keep-alive"
-            - "75"
+        - name: frontend
+          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/frontend:76316e61adb135ed0e3e5827abee4a4819d5f933'
           envFrom:
             - secretRef:
-                name: hello-world
+                name: frontend
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: 80
               protocol: TCP
           resources:
             requests:
@@ -56,7 +47,7 @@ spec:
               memory: 256Mi
           livenessProbe:
             httpGet:
-              path: /health-check
+              path: /readiness-check
               port: http
           readinessProbe:
             httpGet:
