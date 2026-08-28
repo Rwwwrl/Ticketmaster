@@ -83,7 +83,7 @@ Use the corresponding `contract@head` and contract directory for contract change
 
 Review the generated operations manually. Metadata-based tests do not prove the migration works. Keep the service's models module imported in `migrations/env.py` (e.g. `ticketmaster.models`, `hello_world.models`). Existing downgrades are intentionally no-op; do not invent a destructive rollback without an explicit project decision.
 
-Production applies `expand@head` before the rollout and `contract@head` only after the new service is healthy. Preserve that order and design migrations for mixed old/new pods. On Kubernetes this is enforced with two Argo CD sync-wave-ordered Jobs either side of the Deployment's wave (`hello_world`'s are the reference — see the `deployment` skill); on the dormant ECS path it was a CI step ordering.
+Production applies `expand@head` before the rollout and `contract@head` only after the new service is healthy. Preserve that order and design migrations for mixed old/new pods. This is enforced with two Argo CD sync-wave-ordered Jobs either side of the Deployment's wave, for every deployed service (`hello_world` and `ticketmaster` — see the `deployment` skill).
 
 ## Test Persistence
 

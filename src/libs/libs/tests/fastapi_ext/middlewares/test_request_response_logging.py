@@ -23,8 +23,8 @@ def app() -> FastAPI:
     async def echo_post_endpoint(payload: dict) -> dict:
         return payload
 
-    @router.get("/health")
-    async def health_endpoint() -> dict[str, str]:
+    @router.get("/health-check")
+    async def health_check_endpoint() -> dict[str, str]:
         return {"status": "ok"}
 
     test_app.include_router(router=router)
@@ -83,8 +83,8 @@ async def test_request_response_logging_when_health_path_is_skipped(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     with caplog.at_level(logging.INFO, logger="middleware.request_response"):
-        response = await async_client.get(url="/health")
+        response = await async_client.get(url="/health-check")
 
     assert response.status_code == 200
     messages = [record.getMessage() for record in caplog.records]
-    assert not any("/health" in message for message in messages)
+    assert not any("/health-check" in message for message in messages)

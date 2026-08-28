@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hello-world
+  name: ticketmaster
   labels:
-    app: hello-world
+    app: ticketmaster
   annotations:
-    argocd.argoproj.io/sync-wave: {{ .Values.services.helloWorld.meta.argocd.syncWave | quote }}
+    argocd.argoproj.io/sync-wave: {{ .Values.services.ticketmaster.meta.argocd.syncWave | quote }}
 spec:
-  replicas: {{ .Values.services.helloWorld.http.replicas }}
   strategy:
     type: RollingUpdate
   selector:
     matchLabels:
-      app: hello-world
+      app: ticketmaster
   template:
     metadata:
       labels:
-        app: hello-world
+        app: ticketmaster
     spec:
+      serviceAccountName: ticketmaster
       terminationGracePeriodSeconds: 90
       topologySpreadConstraints:
         - maxSkew: 1
@@ -25,13 +25,13 @@ spec:
           whenUnsatisfiable: DoNotSchedule
           labelSelector:
             matchLabels:
-              app: hello-world
+              app: ticketmaster
       containers:
-        - name: hello-world
-          image: '{{ .Values.services.helloWorld.image.repository }}:{{ .Values.commitSha }}'
+        - name: ticketmaster
+          image: '{{ .Values.services.ticketmaster.image.repository }}:{{ .Values.commitSha }}'
           command: ["poetry", "run", "uvicorn"]
           args:
-            - "hello_world.main:app"
+            - "ticketmaster.http.main:app"
             - "--host"
             - "0.0.0.0"
             - "--port"
@@ -40,18 +40,18 @@ spec:
             - "75"
           envFrom:
             - secretRef:
-                name: hello-world
+                name: ticketmaster
           ports:
             - name: http
               containerPort: 8080
               protocol: TCP
           resources:
             requests:
-              cpu: 50m
-              memory: 128Mi
+              cpu: 250m
+              memory: 512Mi
             limits:
-              cpu: 200m
-              memory: 256Mi
+              cpu: 500m
+              memory: 1Gi
           livenessProbe:
             httpGet:
               path: /health-check

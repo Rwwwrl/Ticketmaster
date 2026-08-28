@@ -45,10 +45,10 @@ The production lifespan must:
 - Configure logging and Sentry.
 - Initialize the async SQLModel engine and bind the global `Session`.
 - Configure async Redis with `decode_responses=False`.
-- Bind optional ECS task-role credentials.
+- Bind optional task-role credentials (`aws_task_role`, local-dev only — production runs on EKS Pod Identity, so the block is `None` there and this step is skipped).
 - Close Redis and dispose the engine on shutdown.
 
-Keep `/health` dependency-free for liveness. Keep `/readiness_check` dependent on PostgreSQL and Redis. Keep docs and OpenAPI disabled in data-sensitive environments.
+Keep `/health-check` dependency-free for liveness. Keep `/readiness-check` dependent on PostgreSQL and Redis. Keep docs and OpenAPI disabled in data-sensitive environments.
 
 Preserve the shared middleware behavior and effective order: unhandled exceptions, security headers, request/response logging, request ID, and the 1 MiB request-body limit. Add focused middleware tests when changing it.
 

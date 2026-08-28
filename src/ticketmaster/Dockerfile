@@ -19,4 +19,3 @@ COPY migrations/ ./migrations/
 RUN poetry install --only main
 
 EXPOSE 8080
-CMD ["poetry", "run", "fastapi", "run", "ticketmaster/http/main.py", "--port", "8080", "--host", "0.0.0.0"]

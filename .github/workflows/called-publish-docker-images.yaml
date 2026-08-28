@@ -45,6 +45,7 @@ jobs:
 
           images=(
             "hello-world:src/hello_world"
+            "ticketmaster:src/ticketmaster"
           )
 
           for entry in "${images[@]}"; do
