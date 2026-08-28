@@ -1,0 +1,8 @@
+{{ include "ticketmaster.migrationJob" (dict
+  "service" "ticketmaster"
+  "alembicTarget" "contract@head"
+  "syncWave" .Values.services.ticketmaster.migrations.contract.meta.argocd.syncWave
+  "imageRepository" .Values.services.ticketmaster.image.repository
+  "commitSha" .Values.commitSha
+  "externalSecretName" "ticketmaster"
+) }}

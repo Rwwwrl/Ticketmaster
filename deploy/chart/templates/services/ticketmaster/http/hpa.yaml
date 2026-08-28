@@ -1,0 +1,22 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ticketmaster
+  labels:
+    app: ticketmaster
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.services.ticketmaster.meta.argocd.syncWave | quote }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ticketmaster
+  minReplicas: {{ .Values.services.ticketmaster.http.hpa.minReplicas }}
+  maxReplicas: {{ .Values.services.ticketmaster.http.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.services.ticketmaster.http.hpa.cpuTargetPercent }}

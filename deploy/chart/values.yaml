@@ -12,6 +12,9 @@ infra:
     helloWorld:
       secrets:
         prefix: ""
+    ticketmaster:
+      secrets:
+        prefix: ""
 
 services:
   helloWorld:
@@ -22,6 +25,26 @@ services:
       repository: ""
     http:
       replicas: 1
+    migrations:
+      expand:
+        meta:
+          argocd:
+            syncWave: 0
+      contract:
+        meta:
+          argocd:
+            syncWave: 0
+  ticketmaster:
+    meta:
+      argocd:
+        syncWave: 0
+    image:
+      repository: ""
+    http:
+      hpa:
+        minReplicas: 1
+        maxReplicas: 1
+        cpuTargetPercent: 70
     migrations:
       expand:
         meta:

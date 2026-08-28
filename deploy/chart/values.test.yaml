@@ -10,6 +10,9 @@ infra:
     helloWorld:
       secrets:
         prefix: ticketmaster/hello-world/test-eu
+    ticketmaster:
+      secrets:
+        prefix: ticketmaster/ticketmaster/test-eu
 
 services:
   helloWorld:
@@ -20,6 +23,26 @@ services:
       repository: 258167965416.dkr.ecr.eu-central-1.amazonaws.com/hello-world
     http:
       replicas: 1
+    migrations:
+      expand:
+        meta:
+          argocd:
+            syncWave: -5
+      contract:
+        meta:
+          argocd:
+            syncWave: 5
+  ticketmaster:
+    meta:
+      argocd:
+        syncWave: 0
+    image:
+      repository: 258167965416.dkr.ecr.eu-central-1.amazonaws.com/ticketmaster
+    http:
+      hpa:
+        minReplicas: 1
+        maxReplicas: 3
+        cpuTargetPercent: 70
     migrations:
       expand:
         meta:

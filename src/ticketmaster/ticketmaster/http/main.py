@@ -77,12 +77,12 @@ app.add_middleware(RequestIdMiddleware)
 app.add_middleware(RequestBodyLimitMiddleware, max_body_size=1_048_576)
 
 
-@app.get("/health")
-async def health() -> dict[str, str]:
+@app.get("/health-check")
+async def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/readiness_check")
+@app.get("/readiness-check")
 async def readiness_check() -> dict[str, str]:
     await postgres_health_check()
     await redis_health_check()
