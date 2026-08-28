@@ -30,7 +30,7 @@ spec:
               app: ticketmaster
       containers:
         - name: ticketmaster
-          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/ticketmaster:76316e61adb135ed0e3e5827abee4a4819d5f933'
+          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/ticketmaster:b2a085749fa66a00bd4517469b3c508c5b8544b6'
           command: ["poetry", "run", "uvicorn"]
           args:
             - "ticketmaster.http.main:app"
