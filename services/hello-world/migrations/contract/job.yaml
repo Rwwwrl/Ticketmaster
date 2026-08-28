@@ -1,0 +1,34 @@
+---
+# Source: ticketmaster/templates/services/hello-world/migrations/contract/job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hello-world-migrate-contract
+  labels:
+    app: hello-world-migrate-contract
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        app: hello-world-migrate-contract
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/hello-world:487a036402cd97807789726cfb568080f4a3db22'
+          command: ["poetry", "run", "alembic", "upgrade", "contract@head"]
+          envFrom:
+            - secretRef:
+                name: hello-world
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
