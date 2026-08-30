@@ -37,6 +37,7 @@ ingress:
   meta:
     argocd:
       syncWave: 0
+    certificateArn: ""
 
 services:
   ticketmaster:

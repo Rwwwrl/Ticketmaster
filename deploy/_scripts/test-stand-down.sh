@@ -50,8 +50,11 @@ Test stand is down.
 
 Kept (not billed meaningfully, or holds data): IAM roles, KMS keys,
 Secrets Manager secrets, SSM parameters, Cognito user pool, ECR images,
-the Cognito pre-signup Lambda stack, and your Postgres/Redis (external
-to this account).
+the Cognito pre-signup Lambda stack, your Postgres/Redis (external to
+this account), the as-ticketmaster.com domain registration + hosted
+zone, and the ACM certificate (auto-renews via its kept validation
+CNAME). The test-eu.as-ticketmaster.com alias now points at a deleted
+ALB until the next test-stand-up re-points it — harmless.
 
 Run 'just test-stand-up' to rebuild.
 EOF

@@ -35,6 +35,7 @@ ingress:
   meta:
     argocd:
       syncWave: 0
+    certificateArn: arn:aws:acm:eu-central-1:258167965416:certificate/43c8134a-af07-4b42-98e2-6dd086cabee7
 
 services:
   ticketmaster:
