@@ -1,3 +1,11 @@
+argocd:
+  meta:
+    argocd:
+      syncWave: 10
+  application:
+    repoURL: https://github.com/Rwwwrl/Ticketmaster.git
+    targetRevision: env/test-eu
+
 infra:
   meta:
     region: eu-central-1

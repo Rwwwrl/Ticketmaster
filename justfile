@@ -43,3 +43,12 @@ test-k8s-use-context:
 [group('aws')]
 test-argocd-ui:
     kubectl -n argocd port-forward svc/argocd-server 8080:443
+
+[group('aws')]
+[confirm("Delete the ALB and the whole ticketmaster-test-eu EKS cluster? (data in AWS stays)")]
+test-stand-down:
+    ./deploy/_scripts/test-stand-down.sh
+
+[group('aws')]
+test-stand-up:
+    ./deploy/_scripts/test-stand-up.sh
