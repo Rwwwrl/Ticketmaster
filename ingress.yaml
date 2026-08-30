@@ -10,6 +10,10 @@ metadata:
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/healthcheck-path: /readiness-check
     alb.ingress.kubernetes.io/target-group-attributes: deregistration_delay.timeout_seconds=10
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:eu-central-1:258167965416:certificate/43c8134a-af07-4b42-98e2-6dd086cabee7"
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
 spec:
   ingressClassName: alb
   rules:
