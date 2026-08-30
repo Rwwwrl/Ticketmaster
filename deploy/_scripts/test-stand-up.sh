@@ -18,6 +18,9 @@ TICKETMASTER_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/ticketmaster-test-eu-tick
 LAMBDA_FUNCTION_NAME="ticketmaster-cognito-pre-signup-test-eu"
 API_URL_SSM_PARAM="/ticketmaster/ticketmaster/test-eu/TICKETMASTER_API_URL"
 
+APP_DOMAIN="test-eu.as-ticketmaster.com"
+HOSTED_ZONE_ID="Z03658353OC69AMXF8YCD"
+
 SUBNET_IDS="subnet-092acbfb9158e412b,subnet-09e535091c9ae236e,subnet-086a2225fe233ad7f"
 KUBERNETES_VERSION="1.36"
 # NOTE @sosov: Fixed AWS root-CA thumbprint used by every EKS-issued OIDC provider
@@ -121,7 +124,10 @@ helm upgrade --install external-secrets external-secrets/external-secrets \
 
 echo "==> Installing Argo CD ${ARGOCD_VERSION}"
 kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-kubectl apply -n argocd -f "https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml"
+# NOTE @sosov: --server-side is required — the applicationsets.argoproj.io CRD is too
+# large for client-side apply's last-applied-configuration annotation (256KiB cap).
+kubectl apply -n argocd --server-side --force-conflicts \
+  -f "https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml"
 kubectl -n argocd rollout status deploy/argocd-server --timeout=5m
 kubectl -n argocd rollout status statefulset/argocd-application-controller --timeout=5m
 
@@ -148,19 +154,33 @@ if [ -z "$ALB_HOSTNAME" ]; then
 fi
 echo "    ALB hostname: ${ALB_HOSTNAME}"
 
-echo "==> Refreshing the ALB hostname in SSM and the Cognito pre-signup Lambda"
-NEW_API_URL="http://${ALB_HOSTNAME}"
+echo "==> Upserting Route53 alias ${APP_DOMAIN} -> ${ALB_HOSTNAME}"
+ALB_CANONICAL_ZONE_ID="$(aws elbv2 describe-load-balancers \
+  --query "LoadBalancers[?DNSName=='${ALB_HOSTNAME}'].CanonicalHostedZoneId" --output text)"
+if [ -z "$ALB_CANONICAL_ZONE_ID" ] || [ "$ALB_CANONICAL_ZONE_ID" = "None" ]; then
+  echo "Could not resolve the ALB's canonical hosted zone id for ${ALB_HOSTNAME}" >&2
+  exit 1
+fi
+CHANGE_ID="$(aws route53 change-resource-record-sets --hosted-zone-id "$HOSTED_ZONE_ID" \
+  --change-batch "$(jq -n --arg name "$APP_DOMAIN" --arg dns "$ALB_HOSTNAME" --arg zone "$ALB_CANONICAL_ZONE_ID" \
+    '{Changes:[{Action:"UPSERT",ResourceRecordSet:{Name:$name,Type:"A",AliasTarget:{HostedZoneId:$zone,DNSName:$dns,EvaluateTargetHealth:false}}}]}')" \
+  --query 'ChangeInfo.Id' --output text)"
+aws route53 wait resource-record-sets-changed --id "$CHANGE_ID"
+
+echo "==> Refreshing the app URL in SSM and the Cognito pre-signup Lambda"
+NEW_API_URL="https://${APP_DOMAIN}"
 aws ssm put-parameter --name "$API_URL_SSM_PARAM" --value "$NEW_API_URL" --type String --overwrite >/dev/null
 
 CURRENT_LAMBDA_ENV="$(aws lambda get-function-configuration --function-name "$LAMBDA_FUNCTION_NAME" \
   --query 'Environment.Variables' --output json)"
-UPDATED_LAMBDA_ENV="$(echo "$CURRENT_LAMBDA_ENV" | jq --arg url "$NEW_API_URL" '.TICKETMASTER_API_URL = $url')"
+UPDATED_LAMBDA_ENV_ARG="$(echo "$CURRENT_LAMBDA_ENV" \
+  | jq --arg url "$NEW_API_URL" '{Variables: (.TICKETMASTER_API_URL = $url)}')"
 aws lambda update-function-configuration --function-name "$LAMBDA_FUNCTION_NAME" \
-  --environment "Variables=${UPDATED_LAMBDA_ENV}" >/dev/null
+  --environment "$UPDATED_LAMBDA_ENV_ARG" >/dev/null
 
 echo "==> Waiting for the app to become ready"
 for _ in $(seq 1 30); do
-  if curl -fs -o /dev/null "http://${ALB_HOSTNAME}/readiness-check"; then
+  if curl -fs -o /dev/null "https://${APP_DOMAIN}/readiness-check"; then
     break
   fi
   sleep 10
@@ -171,7 +191,7 @@ ARGOCD_ADMIN_PASSWORD="$(kubectl -n argocd get secret argocd-initial-admin-secre
 
 cat <<EOF
 
-Test stand is up: http://${ALB_HOSTNAME}
+Test stand is up: https://${APP_DOMAIN} (ALB hostname: ${ALB_HOSTNAME})
 
 Argo CD UI: 'just test-argocd-ui', then https://localhost:8080 (user 'admin').
 $( [ -n "$ARGOCD_ADMIN_PASSWORD" ] && echo "Admin password (regenerated this cycle): ${ARGOCD_ADMIN_PASSWORD}" )
