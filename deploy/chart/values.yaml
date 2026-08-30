@@ -1,5 +1,13 @@
 commitSha: ""
 
+argocd:
+  meta:
+    argocd:
+      syncWave: 0
+  application:
+    repoURL: ""
+    targetRevision: ""
+
 infra:
   meta:
     argocd:
