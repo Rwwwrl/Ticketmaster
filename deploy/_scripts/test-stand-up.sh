@@ -15,8 +15,6 @@ NODE_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/ticketmaster-test-eu-eks-auto-nod
 GITHUB_DEPLOYER_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/github-actions-deployer"
 ESO_ROLE_NAME="ticketmaster-test-eu-eso"
 TICKETMASTER_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/ticketmaster-test-eu-ticketmaster"
-LAMBDA_FUNCTION_NAME="ticketmaster-cognito-pre-signup-test-eu"
-API_URL_SSM_PARAM="/ticketmaster/ticketmaster/test-eu/TICKETMASTER_API_URL"
 
 APP_DOMAIN="test-eu.as-ticketmaster.com"
 HOSTED_ZONE_ID="Z03658353OC69AMXF8YCD"
@@ -166,17 +164,6 @@ CHANGE_ID="$(aws route53 change-resource-record-sets --hosted-zone-id "$HOSTED_Z
     '{Changes:[{Action:"UPSERT",ResourceRecordSet:{Name:$name,Type:"A",AliasTarget:{HostedZoneId:$zone,DNSName:$dns,EvaluateTargetHealth:false}}}]}')" \
   --query 'ChangeInfo.Id' --output text)"
 aws route53 wait resource-record-sets-changed --id "$CHANGE_ID"
-
-echo "==> Refreshing the app URL in SSM and the Cognito pre-signup Lambda"
-NEW_API_URL="https://${APP_DOMAIN}"
-aws ssm put-parameter --name "$API_URL_SSM_PARAM" --value "$NEW_API_URL" --type String --overwrite >/dev/null
-
-CURRENT_LAMBDA_ENV="$(aws lambda get-function-configuration --function-name "$LAMBDA_FUNCTION_NAME" \
-  --query 'Environment.Variables' --output json)"
-UPDATED_LAMBDA_ENV_ARG="$(echo "$CURRENT_LAMBDA_ENV" \
-  | jq --arg url "$NEW_API_URL" '{Variables: (.TICKETMASTER_API_URL = $url)}')"
-aws lambda update-function-configuration --function-name "$LAMBDA_FUNCTION_NAME" \
-  --environment "$UPDATED_LAMBDA_ENV_ARG" >/dev/null
 
 echo "==> Waiting for the app to become ready"
 for _ in $(seq 1 30); do
