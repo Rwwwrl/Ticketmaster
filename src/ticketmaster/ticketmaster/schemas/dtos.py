@@ -12,6 +12,7 @@ from ticketmaster.redis_cache.cache_documents import EventCacheDocument
 
 class BaseEventDTO(DTO):
     id: int
+    logical_identity: UUID
     name: str
     description: str
     type: EventTypeEnum

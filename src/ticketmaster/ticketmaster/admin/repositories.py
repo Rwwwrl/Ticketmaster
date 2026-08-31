@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
+from uuid import UUID
 
 from libs.datetime_ext.utils import utc_now
 from sqlalchemy import delete
@@ -20,6 +21,7 @@ class AdminEventRepository(EventRepository):
     async def create(
         cls,
         session: AsyncSession,
+        logical_identity: UUID,
         name: str,
         description: str,
         type: EventTypeEnum,
@@ -28,6 +30,7 @@ class AdminEventRepository(EventRepository):
         currency: CurrencyEnum,
     ) -> BaseEventDTO:
         event = Event(
+            logical_identity=logical_identity,
             name=name,
             description=description,
             type=type,

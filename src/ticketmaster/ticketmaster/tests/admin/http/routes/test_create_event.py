@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from decimal import Decimal
+from uuid import UUID
 
 import pytest
 from httpx import AsyncClient
@@ -30,6 +31,7 @@ async def test_create_event_when_valid_payload_returns_201_and_persists(
     assert response.status_code == 201
     body = EventResponseSchema(**response.json())
     assert body.id is not None
+    assert isinstance(body.logical_identity, UUID)
     assert body.name == payload["name"]
     assert body.description == payload["description"]
     assert body.type == EventTypeEnum.CONCERT
@@ -41,6 +43,7 @@ async def test_create_event_when_valid_payload_returns_201_and_persists(
         persisted = (await session.exec(select(Event).where(Event.id == body.id))).first()
 
         assert persisted is not None
+        assert persisted.logical_identity == body.logical_identity
         assert persisted.name == payload["name"]
         assert persisted.description == payload["description"]
         assert persisted.type == EventTypeEnum.CONCERT

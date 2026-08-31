@@ -14,12 +14,14 @@ class Event(BaseSqlModel, table=True):
     __tablename__ = "event"
     __table_args__ = (
         PrimaryKeyConstraint("id"),
+        Index("ix_event_logical_identity", "logical_identity", unique=True),
         Index("ix_event_start_at_id", "start_at", "id"),
         Index("ix_event_price_id", "price", "id"),
         Index("ix_event_search_vector", "search_vector", postgresql_using="gin"),
     )
 
     id: int | None = Field(default=None, sa_column=Column(Integer, Identity()))
+    logical_identity: UUID
     name: str
     description: str
     type: EventTypeEnum = Field(sa_type=EnumString(EventTypeEnum))
