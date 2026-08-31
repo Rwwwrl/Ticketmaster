@@ -9,6 +9,7 @@ from ticketmaster.enums import CurrencyEnum, EventTypeEnum, TicketStatusEnum
 
 class EventResponseSchema(BaseResponseSchema):
     id: int
+    logical_identity: UUID
     name: str
     description: str
     type: EventTypeEnum

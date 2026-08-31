@@ -10,6 +10,7 @@ class EventFactory(factory.Factory):
     class Meta:
         model = Event
 
+    logical_identity = factory.Faker("uuid4", cast_to=None)
     name = factory.Sequence(lambda n: f"Event {n}")
     description = "A test event"
     type = EventTypeEnum.SPORT

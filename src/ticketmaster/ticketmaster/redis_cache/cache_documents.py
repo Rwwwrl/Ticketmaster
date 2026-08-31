@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Self
+from uuid import UUID
 
 from libs.redis_ext.cache import BaseCacheDocument
 
@@ -12,6 +13,7 @@ if TYPE_CHECKING:
 
 class EventCacheDocument(BaseCacheDocument):
     id: int
+    logical_identity: UUID
     name: str
     description: str
     type: EventTypeEnum

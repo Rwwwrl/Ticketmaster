@@ -1,6 +1,7 @@
 from contextlib import suppress
 from datetime import datetime
 from decimal import Decimal
+from uuid import uuid4
 
 from redis.exceptions import RedisError
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -22,6 +23,7 @@ async def create_event(
 ) -> BaseEventDTO:
     dto = await AdminEventRepository.create(
         session=session,
+        logical_identity=uuid4(),
         name=name,
         description=description,
         type=type,
