@@ -38,6 +38,9 @@ class Settings(SentrySettingsMixin, LoggingSettingsMixin, PostgresSettingsMixin,
     admin_jwt_kms_key_arn: str
     admin_jwt_issuer: str
 
+    s3_events_jwt_kms_key_arn: str
+    s3_events_jwt_issuer: str
+
     cognito_audience: str
 
     version: str

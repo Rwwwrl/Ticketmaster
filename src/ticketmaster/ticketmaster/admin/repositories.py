@@ -37,6 +37,8 @@ class AdminEventRepository(EventRepository):
             start_at=start_at,
             price=price,
             currency=currency,
+            trailer_bucket=None,
+            trailer_key=None,
         )
         session.add(event)
         await session.flush()

@@ -42,3 +42,11 @@ jobs:
       lambda_name: ticketmaster-cognito-pre-signup-test-eu
       lambda_path: src/lambdas/cognito_pre_signup
     secrets: inherit
+
+  deploy-s3-events-lambda:
+    uses: ./.github/workflows/called-deploy-lambda.yaml
+    with:
+      environment: test-eu
+      lambda_name: ticketmaster-s3-events-test-eu
+      lambda_path: src/lambdas/s3_events
+    secrets: inherit

@@ -28,6 +28,8 @@ class Event(BaseSqlModel, table=True):
     start_at: datetime = Field(sa_type=DateTime(timezone=True))
     price: Decimal = Field(sa_type=Numeric(precision=10, scale=2))
     currency: CurrencyEnum = Field(sa_type=EnumString(CurrencyEnum))
+    trailer_bucket: str | None
+    trailer_key: str | None
 
     # NOTE @sosov: Postgres-managed generated tsvector for full-text search; Python never
     # writes to it.

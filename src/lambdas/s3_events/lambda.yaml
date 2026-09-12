@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: S3 Events Lambda - IAM role + function shell + env vars
+
+Parameters:
+  Environment:
+    Type: String
+    AllowedValues: [test-eu]
+
+Resources:
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: kms-sign
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: kms:Sign
+                Resource: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/S3_EVENTS_JWT_KMS_KEY_ARN}}'
+        - PolicyName: s3-head-object
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                # NOTE @sosov: HeadObject (reading the object's metadata) is authorized by
+                # s3:GetObject — there is no separate s3:HeadObject action.
+                Action: s3:GetObject
+                Resource: !Sub 'arn:aws:s3:::{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/MEDIA_BUCKET}}/event-trailer/*'
+
+  Function:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'ticketmaster-s3-events-${Environment}'
+      Runtime: python3.14
+      Handler: s3_events.handler.lambda_handler
+      Role: !GetAtt ExecutionRole.Arn
+      Timeout: 20
+      MemorySize: 256
+      Code:
+        ZipFile: |
+          # Placeholder. Real code is uploaded by aws-actions/aws-lambda-deploy.
+          def lambda_handler(event, context):
+              return event
+      Environment:
+        Variables:
+          TICKETMASTER_API_URL: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/TICKETMASTER_API_URL}}'
+          S3_EVENTS_JWT_KMS_KEY_ARN: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/S3_EVENTS_JWT_KMS_KEY_ARN}}'
+          JWT_AUDIENCE: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/JWT_AUDIENCE}}'
+          S3_EVENTS_JWT_ISSUER: !Sub '{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/S3_EVENTS_JWT_ISSUER}}'
+          LAMBDA_ROLE_ARN: !GetAtt ExecutionRole.Arn
+
+Outputs:
+  FunctionName:
+    Value: !Ref Function
+  ExecutionRoleArn:
+    Value: !GetAtt ExecutionRole.Arn

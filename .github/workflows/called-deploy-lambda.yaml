@@ -13,7 +13,7 @@ on:
       lambda_path:
         required: true
         type: string
-        description: Path to the Lambda package (e.g. src/lambdas/cognito_pre_signup).
+        description: Path to the Lambda package (e.g. src/lambdas/cognito_pre_signup). Its last path segment must equal the Python package directory inside it, which must expose handler.lambda_handler.
 
 jobs:
   build-and-deploy:
@@ -41,6 +41,14 @@ jobs:
           role-to-assume: ${{ vars.DEPLOYER_TO_AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
+      - name: Derive package name and handler
+        run: |
+          # NOTE @sosov: every lambda package's directory name equals its Python package name,
+          # and its handler is always <package_name>.handler.lambda_handler — see lambda_path.
+          PACKAGE_NAME="$(basename "${{ inputs.lambda_path }}")"
+          echo "PACKAGE_NAME=$PACKAGE_NAME" >> "$GITHUB_ENV"
+          echo "HANDLER=${PACKAGE_NAME}.handler.lambda_handler" >> "$GITHUB_ENV"
+
       - name: Build deployment package
         working-directory: ${{ inputs.lambda_path }}
         run: |
@@ -54,7 +62,7 @@ jobs:
             --implementation cp \
             --python-version 3.14 \
             -r build/requirements.txt
-          cp -r cognito_pre_signup build/package/
+          cp -r "$PACKAGE_NAME" build/package/
 
       - name: Deploy Lambda CloudFormation stack
         run: |
@@ -71,6 +79,6 @@ jobs:
         with:
           function-name: ${{ inputs.lambda_name }}
           code-artifacts-dir: ${{ inputs.lambda_path }}/build/package
-          handler: cognito_pre_signup.handler.lambda_handler
+          handler: ${{ env.HANDLER }}
           runtime: python3.14
           publish: true

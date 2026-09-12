@@ -31,6 +31,16 @@ class EventRepository:
         return BaseEventDTO.from_sqlmodel(model=event)
 
     @classmethod
+    async def get_by_logical_identity(cls, session: AsyncSession, logical_identity: UUID) -> BaseEventDTO:
+        result = await session.exec(select(Event).where(Event.logical_identity == logical_identity))
+        event = result.first()
+
+        if event is None:
+            raise EventNotFoundException(f"Event not found for logical_identity={logical_identity}")
+
+        return BaseEventDTO.from_sqlmodel(model=event)
+
+    @classmethod
     async def list_ids_paginated(
         cls,
         session: AsyncSession,

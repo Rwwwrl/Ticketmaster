@@ -16,6 +16,8 @@ class EventResponseSchema(BaseResponseSchema):
     start_at: datetime
     price: Decimal
     currency: CurrencyEnum
+    trailer_bucket: str | None
+    trailer_key: str | None
 
 
 class EventsPageResponseSchema(BaseResponseSchema):
