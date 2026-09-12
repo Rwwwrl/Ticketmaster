@@ -15,7 +15,7 @@ from ticketmaster.models import Event
 from ticketmaster.redis_cache.repositories import NamespaceRepository
 from ticketmaster.tests.factories import EventFactory
 
-_BUCKET = "ticketmaster-test-eu-media"
+_BUCKET = "ticketmaster-test-eu-media-public"
 
 
 @pytest.fixture

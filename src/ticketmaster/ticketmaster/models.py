@@ -1,13 +1,16 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Self
 from uuid import UUID
 
 from libs.sqlmodel_ext import BaseSqlModel, EnumString
+from pydantic import model_validator
 from sqlalchemy import Column, Computed, DateTime, Identity, Index, Integer, Numeric, PrimaryKeyConstraint
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlmodel import Field
 
 from ticketmaster.enums import CurrencyEnum, EventTypeEnum, TicketStatusEnum
+from ticketmaster.utils import event_validate
 
 
 class Event(BaseSqlModel, table=True):
@@ -30,6 +33,10 @@ class Event(BaseSqlModel, table=True):
     currency: CurrencyEnum = Field(sa_type=EnumString(CurrencyEnum))
     trailer_bucket: str | None
     trailer_key: str | None
+
+    @model_validator(mode="after")
+    def _validate_trailer(self) -> Self:
+        return event_validate(self)
 
     # NOTE @sosov: Postgres-managed generated tsvector for full-text search; Python never
     # writes to it.

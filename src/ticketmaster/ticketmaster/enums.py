@@ -28,3 +28,7 @@ class EventSortKeyEnum(StrEnum):
 class EventPageSizeEnum(IntEnum):
     MOBILE = 20
     WEB = 50
+
+
+class S3BucketEnum(StrEnum):
+    MEDIA_PUBLIC = "ticketmaster-test-eu-media-public"

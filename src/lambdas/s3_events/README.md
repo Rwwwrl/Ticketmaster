@@ -1,6 +1,6 @@
 # S3 Events Lambda
 
-Triggered by S3 `ObjectCreated:*` events on the `ticketmaster-test-eu-media` bucket, filtered to the `event-trailer/` prefix. A **dumb forwarder**: it does one `HeadObject` (S3 event notifications carry no object metadata) and POSTs `{bucket, key, metadata}` to `POST /api/admin/s3-events` on the ticketmaster backend, signing a short-lived (60 s) PS256 JWT via `kms:Sign`. It interprets nothing about `metadata["kind"]` or `metadata["logical-identity"]` — all dispatch logic lives in the backend.
+Triggered by S3 `ObjectCreated:*` events on the `ticketmaster-test-eu-media-public` bucket, filtered to the `event-trailer/` prefix. A **dumb forwarder**: it does one `HeadObject` (S3 event notifications carry no object metadata) and POSTs `{bucket, key, metadata}` to `POST /api/admin/s3-events` on the ticketmaster backend, signing a short-lived (60 s) PS256 JWT via `kms:Sign`. It interprets nothing about `metadata["kind"]` or `metadata["logical-identity"]` — all dispatch logic lives in the backend.
 
 ## Layout
 
@@ -34,14 +34,14 @@ Distinct `S3_EVENTS_*` names (not the cognito lambda's generic `JWT_KMS_KEY_ARN`
 Three layers, each owned by a different thing:
 
 - **Manual, one-off per env** — not in this repo, done in the AWS Console:
-  - Create the private S3 bucket (`ticketmaster-test-eu-media`, Block Public Access on).
+  - Create the public-read S3 bucket (`ticketmaster-test-eu-media-public`): Block Public Access `BlockPublicAcls`/`IgnorePublicAcls` on, `BlockPublicPolicy`/`RestrictPublicBuckets` off, plus a bucket policy granting anonymous `s3:GetObject` on every object. Trailers are public information — the API returns a plain virtual-hosted S3 URL, no presigned GET, no CloudFront. Fronting the bucket with CloudFront (Origin Access Control) is a deliberate future step, not required today.
   - Create the KMS asymmetric key (`RSA_2048`, key usage `SIGN_VERIFY`, region `eu-central-1`, alias `ticketmaster-test-eu-s3-events-jwt`). No key-policy edit needed beyond the default: the backend's Pod Identity role already holds `kms:GetPublicKey` account-wide via `AWSKeyManagementServicePowerUser`.
-  - Write SSM params `/ticketmaster/ticketmaster/<env>/MEDIA_BUCKET`, `S3_EVENTS_JWT_KMS_KEY_ARN`, `S3_EVENTS_JWT_ISSUER`.
+  - Write SSM params `/ticketmaster/ticketmaster/<env>/S3_EVENTS_JWT_KMS_KEY_ARN`, `S3_EVENTS_JWT_ISSUER`.
   - After the first CloudFormation deploy of this Lambda (below), wire the bucket's event notification (prefix `event-trailer/`, all object-create events) to invoke `ticketmaster-s3-events-<env>` — the S3 Console adds the required Lambda resource-based invoke permission automatically when the notification is saved.
 
 - **Managed by `lambda.yaml` (CloudFormation)** — deployed from CI:
   - The Lambda function shell (`ticketmaster-s3-events-<env>`).
-  - The Lambda execution IAM role + inline `kms:Sign` policy (on the S3 events KMS key) + inline `s3:GetObject` policy (on `<bucket>/event-trailer/*`, needed for `HeadObject`).
+  - The Lambda execution IAM role + inline `kms:Sign` policy (on the S3 events KMS key) + inline `s3:GetObject` policy, needed for `HeadObject`. Deliberately account-wide (`arn:aws:s3:::*/*`), not scoped to one bucket/prefix, so a bucket rename never needs an SSM or IAM change — the bucket name itself lives in `S3BucketEnum` (`ticketmaster.enums`), not in this template.
   - Env vars (resolved from SSM via `{{resolve:ssm:...}}`).
 
 - **Managed by `aws-actions/aws-lambda-deploy`** — code only:
