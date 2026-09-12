@@ -49,6 +49,7 @@ async def test_list_events_page_when_events_exist_sorted_by_start_at_then_id(
     assert page.page_size == 20
     assert page.next_cursor is None
     assert [item.id for item in page.items] == [earlier.id, later.id]
+    assert all(item.trailer_url is not None for item in page.items)
 
 
 @pytest.mark.asyncio(loop_scope="session")

@@ -123,6 +123,11 @@ pre {
     font-size: 0.9rem;
 }
 
+.event-trailer {
+    width: 100%;
+    max-width: 720px;
+}
+
 table.tickets {
     border-collapse: collapse;
     width: 100%;

@@ -27,6 +27,12 @@ async def test_get_event_by_id_when_event_exists(async_client: AsyncClient) -> N
     assert content.description == "Stadium tour stop"
     assert content.type == EventTypeEnum.CONCERT
     assert content.start_at == datetime(2026, 6, 2, 20, 0, tzinfo=UTC)
+    assert content.trailer_url == (
+        "https://ticketmaster-test-eu-media-public.s3.eu-central-1.amazonaws.com"
+        "/event-trailer/3fa85f64-5717-4562-b3fc-2c963f66afa6.mp4"
+    )
+    assert "trailer_bucket" not in response.json()
+    assert "trailer_key" not in response.json()
 
 
 @pytest.mark.asyncio(loop_scope="session")

@@ -32,10 +32,8 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
-                # NOTE @sosov: HeadObject (reading the object's metadata) is authorized by
-                # s3:GetObject — there is no separate s3:HeadObject action.
                 Action: s3:GetObject
-                Resource: !Sub 'arn:aws:s3:::{{resolve:ssm:/ticketmaster/ticketmaster/${Environment}/MEDIA_BUCKET}}/event-trailer/*'
+                Resource: 'arn:aws:s3:::*/*'
 
   Function:
     Type: AWS::Lambda::Function

@@ -4,10 +4,12 @@ from typing import Self
 from uuid import UUID
 
 from libs.common.schemas.dto import DTO
+from pydantic import model_validator
 
 from ticketmaster.enums import CurrencyEnum, EventTypeEnum, TicketStatusEnum
 from ticketmaster.models import Event, Ticket, User
 from ticketmaster.redis_cache.cache_documents import EventCacheDocument
+from ticketmaster.utils import event_validate
 
 
 class BaseEventDTO(DTO):
@@ -21,6 +23,10 @@ class BaseEventDTO(DTO):
     currency: CurrencyEnum
     trailer_bucket: str | None
     trailer_key: str | None
+
+    @model_validator(mode="after")
+    def _(self) -> Self:
+        return event_validate(self)
 
     @classmethod
     def from_sqlmodel(cls, model: Event) -> Self:

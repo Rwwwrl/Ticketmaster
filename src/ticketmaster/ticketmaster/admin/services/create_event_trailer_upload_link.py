@@ -3,9 +3,9 @@ from uuid import uuid4
 from libs.aws.session import aws_session
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ticketmaster.admin import consts
 from ticketmaster.admin.enums import S3EventKindEnum
 from ticketmaster.admin.http.schemas.response_schemas import EventTrailerUploadLinkResponseSchema
+from ticketmaster.enums import S3BucketEnum
 from ticketmaster.repositories import EventRepository
 
 
@@ -22,7 +22,7 @@ async def create_event_trailer_upload_link(
         upload_url = await s3.generate_presigned_url(
             ClientMethod="put_object",
             Params={
-                "Bucket": consts.MEDIA_BUCKET,
+                "Bucket": S3BucketEnum.MEDIA_PUBLIC.value,
                 "Key": key,
                 "ContentType": "video/mp4",
                 "Metadata": metadata,

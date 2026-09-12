@@ -19,6 +19,7 @@ interface EventDetail {
     description: string;
     type: string;
     start_at: string;
+    trailer_url: string | null;
 }
 
 export function EventDetailsPage() {
@@ -149,6 +150,9 @@ export function EventDetailsPage() {
                         {event.type} · {new Date(event.start_at).toLocaleString()}
                     </p>
                     <p>{event.description}</p>
+                    {event.trailer_url && (
+                        <video className="event-trailer" controls preload="metadata" src={event.trailer_url} />
+                    )}
                 </>
             )}
             {!isSignedIn && <p className="hint">Sign in to reserve or book tickets.</p>}

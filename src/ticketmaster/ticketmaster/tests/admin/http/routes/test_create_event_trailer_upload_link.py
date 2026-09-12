@@ -4,11 +4,11 @@ import pytest
 from httpx import AsyncClient
 from libs.aws.session import aws_session
 from libs.tests_ext.factories import insert
-from ticketmaster.admin import consts
 from ticketmaster.admin.http.schemas.response_schemas import EventTrailerUploadLinkResponseSchema
+from ticketmaster.enums import S3BucketEnum
 from ticketmaster.tests.factories import EventFactory
 
-_FAKE_UPLOAD_URL = "https://ticketmaster-test-eu-media.s3.eu-central-1.amazonaws.com/event-trailer/fake.mp4"
+_FAKE_UPLOAD_URL = "https://ticketmaster-test-eu-media-public.s3.eu-central-1.amazonaws.com/event-trailer/fake.mp4"
 
 
 @pytest.fixture
@@ -47,7 +47,7 @@ async def test_create_event_trailer_upload_link_when_event_exists_returns_200(
     assert kwargs["ExpiresIn"] == 900
 
     params = kwargs["Params"]
-    assert params["Bucket"] == consts.MEDIA_BUCKET
+    assert params["Bucket"] == S3BucketEnum.MEDIA_PUBLIC.value
     assert params["Key"].startswith("event-trailer/")
     assert params["Key"].endswith(".mp4")
     assert params["ContentType"] == "video/mp4"
