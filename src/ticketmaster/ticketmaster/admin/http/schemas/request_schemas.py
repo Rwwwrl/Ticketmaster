@@ -22,3 +22,9 @@ class UpdateEventRequestSchema(BaseRequestSchema):
     start_at: datetime = None
     price: Decimal = None
     currency: CurrencyEnum = None
+
+
+class S3EventRequestSchema(BaseRequestSchema):
+    bucket: str
+    key: str
+    metadata: dict[str, str]

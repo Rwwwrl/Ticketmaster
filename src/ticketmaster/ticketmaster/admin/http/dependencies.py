@@ -37,3 +37,36 @@ async def validate_admin_jwt(authorization: str = Header(...)) -> None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
     except jwt.PyJWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+
+_s3_events_cache = KMSPublicKeyCache(key_arn=settings.s3_events_jwt_kms_key_arn)
+
+
+def _decode_s3_events_jwt_token(token: str, public_key: bytes) -> dict:
+    return jwt.decode(
+        jwt=token,
+        key=public_key,
+        algorithms=[_ADMIN_JWT_ALGORITHM],
+        audience=settings.jwt_audience,
+        issuer=settings.s3_events_jwt_issuer,
+        options={"require": ["exp", "iat", "iss", "aud"]},
+    )
+
+
+async def validate_s3_events_lambda_jwt(authorization: str = Header(...)) -> None:
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    token = authorization.split(" ", 1)[1]
+
+    try:
+        _decode_s3_events_jwt_token(token=token, public_key=await _s3_events_cache.get())
+    except jwt.InvalidSignatureError:
+        # NOTE @sosov: KMS key may have been rotated. Refresh once and retry.
+        # Same self-healing pattern that JWKS clients (Auth0, Cognito) use.
+        try:
+            _decode_s3_events_jwt_token(token=token, public_key=await _s3_events_cache.get_force_refreshed())
+        except jwt.PyJWTError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)

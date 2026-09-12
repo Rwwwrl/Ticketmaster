@@ -13,6 +13,7 @@ python = "^3.14"
 ticketmaster-libs = {path = "src/libs", develop = true}
 ticketmaster = {path = "src/ticketmaster", develop = true}
 cognito-pre-signup-lambda = {path = "src/lambdas/cognito_pre_signup", develop = true}
+s3-events-lambda = {path = "src/lambdas/s3_events", develop = true}
 pre-commit = "^4.5.1"
 ruff = "^0.15.10"
 ipython = "^8.0.0"
@@ -35,6 +36,8 @@ env = [
     "ADMIN_JWT_KMS_KEY_ARN=arn:aws:kms:eu-central-1:000000000000:key/test-admin-placeholder",
     "ADMIN_JWT_ISSUER=ticketmaster-admin",
     "COGNITO_AUDIENCE=ticketmaster-cognito-client-id",
+    "S3_EVENTS_JWT_KMS_KEY_ARN=arn:aws:kms:eu-central-1:000000000000:key/test-s3-events-placeholder",
+    "S3_EVENTS_JWT_ISSUER=ticketmaster-s3-events",
     "TICKETMASTER_API_URL=https://ticketmaster.test.invalid",
     "JWT_KMS_KEY_ARN=arn:aws:kms:eu-central-1:000000000000:key/test-placeholder",
     "JWT_AUDIENCE=ticketmaster-backend",
@@ -45,6 +48,7 @@ testpaths = [
     "src/libs/libs/tests",
     "src/ticketmaster/ticketmaster/tests",
     "src/lambdas/cognito_pre_signup/tests",
+    "src/lambdas/s3_events/tests",
 ]
 
 [tool.ruff]

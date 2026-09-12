@@ -3075,6 +3075,28 @@ files = [
 ]
 
 [[package]]
+name = "s3-events-lambda"
+version = "0.1.0"
+description = "S3 ObjectCreated trigger — dumb forwarder that HEADs the object and POSTs {bucket, key, metadata} to ticketmaster /api/admin/s3-events."
+optional = false
+python-versions = "^3.14"
+groups = ["main"]
+files = []
+develop = true
+
+[package.dependencies]
+boto3 = ">=1.40.46,<1.40.62"
+cryptography = "^48.0.0"
+httpx = "^0.28.1"
+pyjwt = "^2.12.1"
+respx = "^0.23.1"
+tenacity = "^9.0.0"
+
+[package.source]
+type = "directory"
+url = "src/lambdas/s3_events"
+
+[[package]]
 name = "s3transfer"
 version = "0.14.0"
 description = "An Amazon S3 Transfer Manager"
@@ -3350,7 +3372,7 @@ test = ["pytest", "tornado (>=4.5)", "typeguard"]
 
 [[package]]
 name = "ticketmaster"
-version = "0.18.1"
+version = "0.20.0"
 description = "Ticketmaster monolith service"
 optional = false
 python-versions = "^3.14"
@@ -4020,4 +4042,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.14"
-content-hash = "1bfe8992582f0320471de86d067efb264012354f1254ac2f2f737834e9ad332f"
+content-hash = "b7915046189b66b4838d48b6fda8039f08176119c17363defcc4cdf9e2e9471e"

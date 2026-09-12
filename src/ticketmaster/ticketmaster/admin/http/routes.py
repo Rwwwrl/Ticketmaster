@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from libs.sqlmodel_ext import Session
 
 from ticketmaster.admin import services
-from ticketmaster.admin.exceptions import EventHasTicketsException
-from ticketmaster.admin.http.dependencies import validate_admin_jwt
+from ticketmaster.admin.exceptions import EventHasTicketsException, UnsupportedS3ObjectException
+from ticketmaster.admin.http.dependencies import validate_admin_jwt, validate_s3_events_lambda_jwt
 from ticketmaster.admin.http.schemas import request_schemas
+from ticketmaster.admin.http.schemas import response_schemas as admin_response_schemas
 from ticketmaster.exceptions import EventNotFoundException
 from ticketmaster.http.v1.schemas import response_schemas
 from ticketmaster.serializers import ToEventResponseSchemaSerializer
@@ -69,5 +70,43 @@ async def delete_event(event_id: int) -> Response:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
     except EventHasTicketsException:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Event has tickets")
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@admin_router.post(
+    "/events/{event_id}/trailer/upload-link",
+    status_code=status.HTTP_200_OK,
+    response_model=admin_response_schemas.EventTrailerUploadLinkResponseSchema,
+    dependencies=[Depends(validate_admin_jwt)],
+)
+async def create_event_trailer_upload_link(
+    event_id: int,
+) -> admin_response_schemas.EventTrailerUploadLinkResponseSchema:
+    try:
+        async with Session() as session, session.begin():
+            return await services.create_event_trailer_upload_link(session=session, event_id=event_id)
+    except EventNotFoundException:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+
+
+@admin_router.post(
+    "/s3-events",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(validate_s3_events_lambda_jwt)],
+)
+async def process_s3_event(payload: request_schemas.S3EventRequestSchema) -> Response:
+    try:
+        async with Session() as session, session.begin():
+            await services.process_s3_event(
+                session=session,
+                bucket=payload.bucket,
+                key=payload.key,
+                metadata=payload.metadata,
+            )
+    except UnsupportedS3ObjectException:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Unsupported s3 object")
+    except EventNotFoundException:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

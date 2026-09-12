@@ -17,6 +17,8 @@ class EventFactory(factory.Factory):
     start_at = factory.LazyFunction(utc_now)
     price = Decimal("10.00")
     currency = CurrencyEnum.EUR
+    trailer_bucket = "ticketmaster-test-eu-media"
+    trailer_key = "event-trailer/3fa85f64-5717-4562-b3fc-2c963f66afa6.mp4"
 
 
 class UserFactory(factory.Factory):
