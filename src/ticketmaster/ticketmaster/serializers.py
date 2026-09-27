@@ -1,4 +1,4 @@
-from libs.aws.utils import build_s3_object_public_url
+from libs.aws.utils import build_cdn_object_url
 
 from ticketmaster.http.v1.schemas.response_schemas import (
     EventResponseSchema,
@@ -16,11 +16,7 @@ class ToEventResponseSchemaSerializer:
 
         trailer_url = None
         if all([dto.trailer_bucket, dto.trailer_key]):
-            trailer_url = build_s3_object_public_url(
-                region=settings.aws_region,
-                bucket=dto.trailer_bucket,
-                key=dto.trailer_key,
-            )
+            trailer_url = build_cdn_object_url(domain=settings.cdn_domain, key=dto.trailer_key)
 
         return EventResponseSchema(**data, trailer_url=trailer_url)
 

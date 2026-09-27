@@ -1,9 +1,7 @@
-from libs.aws.utils import build_s3_object_public_url
+from libs.aws.utils import build_cdn_object_url
 
 
-def test_build_s3_object_public_url_returns_virtual_hosted_style_url() -> None:
-    url = build_s3_object_public_url(
-        region="eu-central-1", bucket="ticketmaster-test-eu-media-public", key="event-trailer/a.mp4"
-    )
+def test_build_cdn_object_url_returns_url_under_cdn_domain() -> None:
+    url = build_cdn_object_url(domain="media.test-eu.as-ticketmaster.com", key="event-trailer/a.mp4")
 
-    assert url == "https://ticketmaster-test-eu-media-public.s3.eu-central-1.amazonaws.com/event-trailer/a.mp4"
+    assert url == "https://media.test-eu.as-ticketmaster.com/event-trailer/a.mp4"

@@ -30,6 +30,8 @@ class Settings(SentrySettingsMixin, LoggingSettingsMixin, PostgresSettingsMixin,
 
     aws_region: str
 
+    cdn_domain: str
+
     jwt_audience: str
 
     lambda_jwt_kms_key_arn: str

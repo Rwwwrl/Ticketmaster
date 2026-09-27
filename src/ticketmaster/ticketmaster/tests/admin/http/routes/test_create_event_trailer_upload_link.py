@@ -1,8 +1,7 @@
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import AsyncClient
-from libs.aws.session import aws_session
 from libs.tests_ext.factories import insert
 from ticketmaster.admin.http.schemas.response_schemas import EventTrailerUploadLinkResponseSchema
 from ticketmaster.enums import S3BucketEnum
@@ -11,24 +10,13 @@ from ticketmaster.tests.factories import EventFactory
 _FAKE_UPLOAD_URL = "https://ticketmaster-test-eu-media-public.s3.eu-central-1.amazonaws.com/event-trailer/fake.mp4"
 
 
-@pytest.fixture
-def mock_s3(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
-    s3 = AsyncMock()
-    s3.generate_presigned_url = AsyncMock(return_value=_FAKE_UPLOAD_URL)
-
-    cm = MagicMock()
-    cm.__aenter__ = AsyncMock(return_value=s3)
-    cm.__aexit__ = AsyncMock(return_value=None)
-    monkeypatch.setattr(aws_session, "client", MagicMock(return_value=cm))
-    return s3
-
-
 @pytest.mark.asyncio(loop_scope="session")
 async def test_create_event_trailer_upload_link_when_event_exists_returns_200(
     async_client: AsyncClient,
     bypass_admin_jwt: None,
     mock_s3: AsyncMock,
 ) -> None:
+    mock_s3.generate_presigned_url = AsyncMock(return_value=_FAKE_UPLOAD_URL)
     event = EventFactory()
     await insert(event)
 
