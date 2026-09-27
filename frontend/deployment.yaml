@@ -30,7 +30,7 @@ spec:
               app: frontend
       containers:
         - name: frontend
-          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/frontend:974cce94ecab3cf830800f07db37b8c9e01f68b8'
+          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/frontend:03e031ca293b535718ac849b689a113f6835a1c0'
           envFrom:
             - secretRef:
                 name: frontend
