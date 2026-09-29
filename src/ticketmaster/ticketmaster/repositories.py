@@ -1,7 +1,6 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from uuid import UUID
 
-from libs.datetime_ext.utils import utc_now
 from sqlalchemy import and_, delete, func, or_, tuple_, update
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlmodel import select
@@ -141,7 +140,6 @@ class TicketRepository:
         event_id: int,
         ticket_id: int,
         user_id: int,
-        now: datetime,
         reservation_ttl: timedelta,
     ) -> bool:
         """Conditionally claim a ticket for ``user_id``; returns ``True`` iff the row was updated.
@@ -159,15 +157,14 @@ class TicketRepository:
                     Ticket.status == TicketStatusEnum.AVAILABLE,
                     and_(
                         Ticket.status == TicketStatusEnum.RESERVED,
-                        Ticket.reserved_at < now - reservation_ttl,
+                        Ticket.reserved_at < func.now() - reservation_ttl,
                     ),
                 ),
             )
             .values(
                 status=TicketStatusEnum.RESERVED,
-                reserved_at=now,
+                reserved_at=func.now(),
                 user_id=user_id,
-                updated_at=utc_now(),
             )
         )
         result = await session.exec(stmt)
@@ -180,7 +177,6 @@ class TicketRepository:
         event_id: int,
         ticket_id: int,
         user_id: int,
-        now: datetime,
         reservation_ttl: timedelta,
     ) -> bool:
         """Confirm a fresh reservation held by ``user_id``; returns ``True`` iff the row was updated.
@@ -195,12 +191,11 @@ class TicketRepository:
                 Ticket.event_id == event_id,
                 Ticket.user_id == user_id,
                 Ticket.status == TicketStatusEnum.RESERVED,
-                Ticket.reserved_at > now - reservation_ttl,
+                Ticket.reserved_at > func.now() - reservation_ttl,
             )
             .values(
                 status=TicketStatusEnum.BOOKED,
-                booked_at=now,
-                updated_at=utc_now(),
+                booked_at=func.now(),
             )
         )
         result = await session.exec(stmt)
@@ -215,7 +210,6 @@ class TicketRepository:
                 status=TicketStatusEnum.AVAILABLE,
                 user_id=None,
                 reserved_at=None,
-                updated_at=utc_now(),
             )
         )
         await session.exec(stmt)
@@ -228,7 +222,6 @@ class TicketRepository:
             .values(
                 status=TicketStatusEnum.ANONYMOUS_BOOKED,
                 user_id=None,
-                updated_at=utc_now(),
             )
         )
         await session.exec(stmt)

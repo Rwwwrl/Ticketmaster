@@ -25,17 +25,15 @@ async def test_reserve_ticket_when_available_returns_204(
     ticket = TicketFactory(event_id=event.id)
     await insert(ticket)
 
-    before = utc_now()
     response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/reserve")
-    after = utc_now()
 
     assert response.status_code == 204
     async with Session() as session, session.begin():
         persisted = await TicketRepository.get_by_id(session=session, ticket_id=ticket.id)
     assert persisted.status == TicketStatusEnum.RESERVED
     assert persisted.user_id == override_user_jwt.id
-    assert before <= persisted.reserved_at <= after
-    assert before <= persisted.updated_at <= after
+    assert persisted.reserved_at > ticket.updated_at
+    assert persisted.updated_at == persisted.reserved_at
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -83,16 +81,15 @@ async def test_reserve_ticket_when_reserved_expired_returns_204(
     )
     await insert(ticket)
 
-    before = utc_now()
     response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/reserve")
-    after = utc_now()
 
     assert response.status_code == 204
     async with Session() as session, session.begin():
         persisted = await TicketRepository.get_by_id(session=session, ticket_id=ticket.id)
     assert persisted.status == TicketStatusEnum.RESERVED
     assert persisted.user_id == override_user_jwt.id
-    assert before <= persisted.reserved_at <= after
+    assert persisted.reserved_at > ticket.updated_at
+    assert persisted.updated_at == persisted.reserved_at
 
 
 @pytest.mark.asyncio(loop_scope="session")

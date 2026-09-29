@@ -3,7 +3,6 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from libs.datetime_ext.utils import utc_now
 from sqlalchemy import delete
 from sqlalchemy.sql.elements import ColumnElement
 from sqlmodel import select
@@ -64,7 +63,6 @@ class AdminEventRepository(EventRepository):
             raise EventNotFoundException(f"Event not found for id={_id}")
 
         event.sqlmodel_update(changes)
-        event.updated_at = utc_now()
         session.add(event)
         await session.flush()
         await session.refresh(event)

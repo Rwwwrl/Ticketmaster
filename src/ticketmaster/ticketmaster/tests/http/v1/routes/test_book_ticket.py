@@ -31,9 +31,7 @@ async def test_book_ticket_when_fresh_reservation_by_caller_returns_204(
     )
     await insert(ticket)
 
-    before = utc_now()
     response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/book")
-    after = utc_now()
 
     assert response.status_code == 204
 
@@ -43,8 +41,8 @@ async def test_book_ticket_when_fresh_reservation_by_caller_returns_204(
     assert persisted.status == TicketStatusEnum.BOOKED
     assert persisted.user_id == override_user_jwt.id
     assert persisted.reserved_at == reserved_at
-    assert before <= persisted.booked_at <= after
-    assert before <= persisted.updated_at <= after
+    assert persisted.booked_at > ticket.updated_at
+    assert persisted.updated_at == persisted.booked_at
 
 
 @pytest.mark.asyncio(loop_scope="session")

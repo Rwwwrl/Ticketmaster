@@ -52,7 +52,7 @@ class Event(BaseSqlModel, table=True):
 
 The optional identity field reflects the pre-insert lifecycle; do not make ordinary required columns optional for convenience.
 
-`BaseSqlModel` supplies timezone-aware `created_at` and `updated_at`. ORM updates trigger the timestamp listener. SQLAlchemy bulk `update()` bypasses it, so set `updated_at=utc_now()` explicitly in bulk DML.
+`BaseSqlModel` supplies timezone-aware `created_at` and `updated_at`, both owned by Postgres: `server_default=func.now()` on insert and `onupdate=func.now()` on every ORM flush and bulk `update()`. Never set them from Python. Other lifecycle timestamps written in DML (`reserved_at`, `booked_at`) and TTL comparisons use `func.now()` too, so every timestamp in one transaction is the same instant.
 
 ## Implement Repositories
 

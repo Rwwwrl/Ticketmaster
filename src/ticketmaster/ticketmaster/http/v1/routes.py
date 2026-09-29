@@ -1,7 +1,6 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from libs.datetime_ext.utils import utc_now
 from libs.sqlmodel_ext import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -172,7 +171,6 @@ async def reserve_ticket(
             event_id=event_id,
             ticket_id=ticket_id,
             user_id=user.id,
-            now=utc_now(),
             reservation_ttl=consts.RESERVATION_TTL,
         )
 
@@ -197,7 +195,6 @@ async def book_ticket(
             event_id=event_id,
             ticket_id=ticket_id,
             user_id=user.id,
-            now=utc_now(),
             reservation_ttl=consts.RESERVATION_TTL,
         )
 
