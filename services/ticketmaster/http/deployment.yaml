@@ -23,14 +23,14 @@ spec:
       terminationGracePeriodSeconds: 90
       topologySpreadConstraints:
         - maxSkew: 1
-          topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: DoNotSchedule
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
               app: ticketmaster
       containers:
         - name: ticketmaster
-          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/ticketmaster:03e031ca293b535718ac849b689a113f6835a1c0'
+          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/ticketmaster:c1ff93942ad259df597e98ac286ac0d181d75fa0'
           command: ["poetry", "run", "uvicorn"]
           args:
             - "ticketmaster.http.main:app"

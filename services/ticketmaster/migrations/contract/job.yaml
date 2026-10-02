@@ -20,7 +20,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: migrate
-          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/ticketmaster:03e031ca293b535718ac849b689a113f6835a1c0'
+          image: '258167965416.dkr.ecr.eu-central-1.amazonaws.com/ticketmaster:c1ff93942ad259df597e98ac286ac0d181d75fa0'
           command: ["poetry", "run", "alembic", "upgrade", "contract@head"]
           envFrom:
             - secretRef:
