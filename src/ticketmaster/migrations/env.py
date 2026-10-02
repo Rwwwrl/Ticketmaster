@@ -3,4 +3,4 @@ from libs.alembic_ext.env_helpers import run_alembic
 from libs.sqlmodel_ext import BaseSqlModel
 from ticketmaster.settings import settings
 
-run_alembic(settings_url=settings.postgres_db_url, target_metadata=BaseSqlModel.metadata)
+run_alembic(settings_url=settings.postgres_direct_db_url, target_metadata=BaseSqlModel.metadata)

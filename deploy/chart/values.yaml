@@ -19,6 +19,9 @@ infra:
   frontend:
     secrets:
       prefix: ""
+  pgbouncer:
+    secrets:
+      prefix: ""
   services:
     ticketmaster:
       secrets:
@@ -38,6 +41,14 @@ ingress:
     argocd:
       syncWave: 0
     certificateArn: ""
+
+pgbouncer:
+  meta:
+    argocd:
+      syncWave: 0
+    tiger:
+      host: ""
+      port: ""
 
 services:
   ticketmaster:

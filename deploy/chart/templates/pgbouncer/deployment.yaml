@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgbouncer
+  labels:
+    app: pgbouncer
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.pgbouncer.meta.argocd.syncWave | quote }}
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: pgbouncer
+  template:
+    metadata:
+      labels:
+        app: pgbouncer
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/pgbouncer/configmap.yaml") . | sha256sum }}
+    spec:
+      # NOTE @sosov: Lets the userlist-reloader container send SIGHUP to PgBouncer.
+      shareProcessNamespace: true
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: pgbouncer
+      containers:
+        - name: pgbouncer
+          image: edoburu/pgbouncer:v1.26.0-p0@sha256:b17551c776ef7e5769ef80b956d20f85e2fd25dd8912d31d58f782aad495b711
+          command: ["/usr/bin/pgbouncer", "/etc/pgbouncer/pgbouncer.ini"]
+          ports:
+            - name: pgbouncer
+              containerPort: 5432
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+          livenessProbe:
+            tcpSocket:
+              port: pgbouncer
+          readinessProbe:
+            tcpSocket:
+              port: pgbouncer
+          volumeMounts:
+            - name: config
+              mountPath: /etc/pgbouncer
+              readOnly: true
+        # NOTE @sosov: ESO updates the Secret, kubelet updates the mounted file in place (~1 min), PgBouncer re-reads
+        # auth_file on SIGHUP without dropping connections. pgbouncer.ini changes roll pods via checksum/config instead.
+        - name: userlist-reloader
+          image: edoburu/pgbouncer:v1.26.0-p0@sha256:b17551c776ef7e5769ef80b956d20f85e2fd25dd8912d31d58f782aad495b711
+          command:
+            - /bin/sh
+            - -c
+            - |
+              last="$(md5sum /etc/pgbouncer/userlist.txt)"
+              while sleep 10; do
+                current="$(md5sum /etc/pgbouncer/userlist.txt)"
+                if [ "$current" != "$last" ]; then
+                  echo "userlist.txt changed, sending SIGHUP to pgbouncer"
+                  pkill -HUP pgbouncer
+                  last="$current"
+                fi
+              done
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/pgbouncer
+              readOnly: true
+      volumes:
+        - name: config
+          projected:
+            sources:
+              - configMap:
+                  name: pgbouncer
+              - secret:
+                  name: pgbouncer
