@@ -127,7 +127,8 @@ echo "==> Static NodePools: ${NODES_PER_ZONE} ${NODE_INSTANCE_TYPE} node per sub
 # NOTE @sosov: Auto Mode has no AWS API for custom node pools, so the NodeClass and NodePools are
 # Kubernetes objects — but this script owns them and Argo CD never sees them. Change a pool by
 # editing this script and re-running it (idempotent). Drift replacement is blocked below, so roll a
-# node by hand: `kubectl delete nodeclaim <name>`. Expiry (504h) cannot be blocked.
+# node by hand: `kubectl delete nodeclaim <name>`. Expiry cannot be blocked: Auto Mode caps
+# expireAfter + terminationGracePeriod (default 24h) at 21 days, hence 480h.
 for CRD in nodepools.karpenter.sh nodeclasses.eks.amazonaws.com; do
   for _ in $(seq 1 30); do
     kubectl get crd "$CRD" >/dev/null 2>&1 && break
@@ -176,7 +177,7 @@ spec:
         group: eks.amazonaws.com
         kind: NodeClass
         name: static
-      expireAfter: 504h
+      expireAfter: 480h
       requirements:
         - {key: topology.kubernetes.io/zone, operator: In, values: [${AZ}]}
         - {key: node.kubernetes.io/instance-type, operator: In, values: [${NODE_INSTANCE_TYPE}]}
