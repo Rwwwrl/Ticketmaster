@@ -29,7 +29,7 @@ frontend:
   image:
     repository: 258167965416.dkr.ecr.eu-central-1.amazonaws.com/frontend
   http:
-    replicas: 1
+    replicas: 3
 
 ingress:
   meta:
@@ -46,8 +46,8 @@ services:
       repository: 258167965416.dkr.ecr.eu-central-1.amazonaws.com/ticketmaster
     http:
       hpa:
-        minReplicas: 1
-        maxReplicas: 3
+        minReplicas: 3
+        maxReplicas: 5
         cpuTargetPercent: 70
     migrations:
       expand:
