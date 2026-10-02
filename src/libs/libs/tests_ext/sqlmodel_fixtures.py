@@ -14,8 +14,8 @@ _TEST_DB_NAME = "test"
 
 @pytest_asyncio.fixture(scope="session")
 async def sqlmodel_engine(settings: PostgresSettingsMixin) -> AsyncGenerator[AsyncEngine]:
-    admin_url = make_url(settings.postgres_db_url).set(database="postgres")
-    test_url = make_url(settings.postgres_db_url).set(database=_TEST_DB_NAME)
+    admin_url = make_url(settings.postgres_direct_db_url).set(database="postgres")
+    test_url = make_url(settings.postgres_direct_db_url).set(database=_TEST_DB_NAME)
 
     admin_engine = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
     async with admin_engine.connect() as conn:

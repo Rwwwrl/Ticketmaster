@@ -83,6 +83,8 @@ Use the corresponding `contract@head` and contract directory for contract change
 
 Review the generated operations manually. Metadata-based tests do not prove the migration works. Keep the service's models module imported in `migrations/env.py` (e.g. `ticketmaster.models`). Existing downgrades are intentionally no-op; do not invent a destructive rollback without an explicit project decision.
 
+Never change a column's type in place (`ALTER COLUMN ... TYPE`): add a new column in expand, backfill and switch the code, drop the old column in contract. Besides breaking old pods mid-rollout, an in-place type change breaks PgBouncer's shared prepared statements (`cached plan must not change result type`) until every PgBouncer reconnects.
+
 Production applies `expand@head` before the rollout and `contract@head` only after the new service is healthy. Preserve that order and design migrations for mixed old/new pods. This is enforced with two Argo CD sync-wave-ordered Jobs either side of the Deployment's wave, for every deployed service (`ticketmaster` today — see the `deployment` skill).
 
 ## Test Persistence

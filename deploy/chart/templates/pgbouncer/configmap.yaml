@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgbouncer
+  labels:
+    app: pgbouncer
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.pgbouncer.meta.argocd.syncWave | quote }}
+data:
+  pgbouncer.ini: |
+    [databases]
+    ticketmaster = host={{ .Values.pgbouncer.meta.tiger.host }} port={{ .Values.pgbouncer.meta.tiger.port }} dbname=tsdb
+
+    [pgbouncer]
+    listen_addr = 0.0.0.0
+    listen_port = 5432
+    auth_file = /etc/pgbouncer/userlist.txt
+    pool_mode = transaction
+    ; > 0 keeps asyncpg's statement cache working.
+    max_prepared_statements = 200
