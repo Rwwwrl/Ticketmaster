@@ -11,7 +11,8 @@ CLUSTER_NAME="ticketmaster-test-eu"
 ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
 
 CLUSTER_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/ticketmaster-test-eu-eks-cluster"
-NODE_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/ticketmaster-test-eu-eks-auto-node"
+NODE_ROLE_NAME="ticketmaster-test-eu-eks-auto-node"
+NODE_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${NODE_ROLE_NAME}"
 GITHUB_DEPLOYER_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/github-actions-deployer"
 ESO_ROLE_NAME="ticketmaster-test-eu-eso"
 TICKETMASTER_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/ticketmaster-test-eu-ticketmaster"
@@ -21,6 +22,8 @@ HOSTED_ZONE_ID="Z03658353OC69AMXF8YCD"
 
 SUBNET_IDS="subnet-092acbfb9158e412b,subnet-09e535091c9ae236e,subnet-086a2225fe233ad7f"
 KUBERNETES_VERSION="1.36"
+NODE_INSTANCE_TYPE="t3a.medium"
+NODES_PER_ZONE=1
 # NOTE @sosov: Fixed AWS root-CA thumbprint used by every EKS-issued OIDC provider
 # in this account/region — not specific to a cluster instance.
 OIDC_ROOT_THUMBPRINT="06b25927c42a721631c1efd9431e648fa62e1e39"
@@ -47,7 +50,7 @@ else
     --resources-vpc-config "subnetIds=${SUBNET_IDS},endpointPublicAccess=true,endpointPrivateAccess=true" \
     --kubernetes-network-config "serviceIpv4Cidr=10.100.0.0/16,elasticLoadBalancing={enabled=true}" \
     --access-config "authenticationMode=API,bootstrapClusterCreatorAdminPermissions=true" \
-    --compute-config "enabled=true,nodePools=general-purpose,system,nodeRoleArn=${NODE_ROLE_ARN}" \
+    --compute-config '{"enabled":true,"nodePools":[]}' \
     --storage-config "blockStorage={enabled=true}" >/dev/null
 fi
 aws eks wait cluster-active --name "$CLUSTER_NAME"
@@ -61,9 +64,16 @@ aws eks associate-access-policy --cluster-name "$CLUSTER_NAME" \
   --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy \
   --access-scope type=cluster >/dev/null 2>&1 \
   || echo "    github-actions-deployer policy already associated"
+# NOTE @sosov: With the built-in node pools off, EKS no longer creates the node role's access
+# entry or attaches its policy, so a custom NodeClass needs both done here.
 aws eks create-access-entry --cluster-name "$CLUSTER_NAME" \
   --principal-arn "$NODE_ROLE_ARN" --type EC2 >/dev/null 2>&1 \
   || echo "    node role entry already exists"
+aws eks associate-access-policy --cluster-name "$CLUSTER_NAME" \
+  --principal-arn "$NODE_ROLE_ARN" \
+  --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSAutoNodePolicy \
+  --access-scope type=cluster >/dev/null 2>&1 \
+  || echo "    node role policy already associated"
 
 echo "==> IRSA: rewiring ${ESO_ROLE_NAME} trust policy to the new cluster's OIDC issuer"
 OIDC_ISSUER_URL="$(aws eks describe-cluster --name "$CLUSTER_NAME" \
@@ -112,6 +122,80 @@ aws eks create-addon --cluster-name "$CLUSTER_NAME" \
 
 echo "==> Updating kubeconfig"
 aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$AWS_REGION" >/dev/null
+
+echo "==> Static NodePools: ${NODES_PER_ZONE} ${NODE_INSTANCE_TYPE} node per subnet/AZ"
+# NOTE @sosov: Auto Mode has no AWS API for custom node pools, so the NodeClass and NodePools are
+# Kubernetes objects — but this script owns them and Argo CD never sees them. Change a pool by
+# editing this script and re-running it (idempotent). Drift replacement is blocked below, so roll a
+# node by hand: `kubectl delete nodeclaim <name>`. Expiry (504h) cannot be blocked.
+for CRD in nodepools.karpenter.sh nodeclasses.eks.amazonaws.com; do
+  for _ in $(seq 1 30); do
+    kubectl get crd "$CRD" >/dev/null 2>&1 && break
+    sleep 10
+  done
+  kubectl get crd "$CRD" >/dev/null
+done
+
+SUBNET_LIST="${SUBNET_IDS//,/ }"
+SUBNET_TERMS="$(echo "$SUBNET_IDS" | sed 's/[^,]*/{id: &}/g')"
+CLUSTER_SG_ID="$(aws eks describe-cluster --name "$CLUSTER_NAME" \
+  --query 'cluster.resourcesVpcConfig.clusterSecurityGroupId' --output text)"
+kubectl apply -f - <<EOF
+apiVersion: eks.amazonaws.com/v1
+kind: NodeClass
+metadata:
+  name: static
+spec:
+  role: ${NODE_ROLE_NAME}
+  subnetSelectorTerms: [${SUBNET_TERMS}]
+  securityGroupSelectorTerms:
+    - id: ${CLUSTER_SG_ID}
+EOF
+
+EXPECTED_NODES=0
+for SUBNET_ID in $SUBNET_LIST; do
+  AZ="$(aws ec2 describe-subnets --subnet-ids "$SUBNET_ID" \
+    --query 'Subnets[0].AvailabilityZone' --output text)"
+  kubectl apply -f - <<EOF
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: static-${AZ}
+spec:
+  replicas: ${NODES_PER_ZONE}
+  limits:
+    nodes: $((NODES_PER_ZONE + 1))
+  disruption:
+    consolidateAfter: Never
+    budgets:
+      - nodes: "0"
+        reasons: [Drifted]
+  template:
+    spec:
+      nodeClassRef:
+        group: eks.amazonaws.com
+        kind: NodeClass
+        name: static
+      expireAfter: 504h
+      requirements:
+        - {key: topology.kubernetes.io/zone, operator: In, values: [${AZ}]}
+        - {key: node.kubernetes.io/instance-type, operator: In, values: [${NODE_INSTANCE_TYPE}]}
+        - {key: karpenter.sh/capacity-type, operator: In, values: [on-demand]}
+EOF
+  EXPECTED_NODES=$((EXPECTED_NODES + NODES_PER_ZONE))
+done
+
+echo "==> Waiting for ${EXPECTED_NODES} Ready nodes"
+READY_NODES=0
+for _ in $(seq 1 60); do
+  READY_NODES="$(kubectl get nodes --no-headers 2>/dev/null | awk '$2=="Ready"' | wc -l | tr -d ' ' || true)"
+  [ "$READY_NODES" -ge "$EXPECTED_NODES" ] && break
+  sleep 10
+done
+if [ "$READY_NODES" -lt "$EXPECTED_NODES" ]; then
+  echo "Timed out: ${READY_NODES}/${EXPECTED_NODES} nodes Ready — check 'kubectl get nodepools,nodeclaims' and 'kubectl describe nodeclass static'." >&2
+  exit 1
+fi
 
 echo "==> Installing External Secrets Operator ${ESO_CHART_VERSION}"
 helm repo add external-secrets https://charts.external-secrets.io >/dev/null
