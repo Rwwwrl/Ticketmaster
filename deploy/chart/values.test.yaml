@@ -8,22 +8,29 @@ argocd:
 
 infra:
   meta:
-    region: eu-central-1
     argocd:
       syncWave: -10
+    region: eu-central-1
   externalSecrets:
     serviceAccount:
       roleArn: arn:aws:iam::258167965416:role/ticketmaster-test-eu-eso
-  frontend:
-    secrets:
+    frontend:
       prefix: ticketmaster/frontend/test-eu
-  pgbouncer:
-    secrets:
+    pgbouncer:
       prefix: ticketmaster/pgbouncer/test-eu
-  services:
-    ticketmaster:
-      secrets:
+    postgres:
+      prefix: ticketmaster/postgres/test-eu
+    services:
+      ticketmaster:
         prefix: ticketmaster/ticketmaster/test-eu
+  pgbouncer:
+    meta:
+      argocd:
+        syncWave: -8
+  postgres:
+    meta:
+      argocd:
+        syncWave: -8
 
 frontend:
   meta:
@@ -39,14 +46,6 @@ ingress:
     argocd:
       syncWave: 0
     certificateArn: arn:aws:acm:eu-central-1:258167965416:certificate/43c8134a-af07-4b42-98e2-6dd086cabee7
-
-pgbouncer:
-  meta:
-    argocd:
-      syncWave: -8
-    tiger:
-      host: TODO_TIGER_HOST
-      port: TODO_TIGER_PORT
 
 services:
   ticketmaster:

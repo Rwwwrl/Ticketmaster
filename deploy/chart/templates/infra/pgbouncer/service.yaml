@@ -5,7 +5,7 @@ metadata:
   labels:
     app: pgbouncer
   annotations:
-    argocd.argoproj.io/sync-wave: {{ .Values.pgbouncer.meta.argocd.syncWave | quote }}
+    argocd.argoproj.io/sync-wave: {{ .Values.infra.pgbouncer.meta.argocd.syncWave | quote }}
 spec:
   type: ClusterIP
   selector:

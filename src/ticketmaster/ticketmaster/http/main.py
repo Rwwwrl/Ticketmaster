@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from libs.aws.session import bind_task_role_to_aws_session
 from libs.common.enums import AppNameEnum, ServiceNameEnum
+from libs.fastapi_ext.exception_handlers import statement_timeout_exception_handler
 from libs.fastapi_ext.middlewares import (
     RequestBodyLimitMiddleware,
     RequestIdMiddleware,
@@ -21,6 +22,7 @@ from libs.settings import is_data_sensitive_env
 from libs.sqlmodel_ext import Session
 from libs.sqlmodel_ext.utils import health_check as postgres_health_check
 from redis.asyncio import Redis
+from sqlalchemy.exc import DBAPIError
 
 from ticketmaster.admin.http.routes import admin_router
 from ticketmaster.http.v1.routes import v1_router
@@ -71,8 +73,10 @@ app = FastAPI(
     openapi_url=None if _is_sensitive else "/api/openapi.json",
 )
 
+app.add_exception_handler(DBAPIError, statement_timeout_exception_handler)
+
 app.add_middleware(UnhandledExceptionMiddleware)
-app.add_middleware(RequestTimeoutMiddleware, timeout_seconds=10)
+app.add_middleware(RequestTimeoutMiddleware, timeout_seconds=20)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestResponseLoggingMiddleware)
 app.add_middleware(RequestIdMiddleware)

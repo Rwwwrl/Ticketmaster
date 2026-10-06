@@ -2,9 +2,11 @@ from logging.config import fileConfig
 from typing import Any
 
 from alembic import context
-from sqlalchemy import MetaData, create_engine, pool
+from sqlalchemy import Engine, MetaData, create_engine, pool
 
 from libs.sqlmodel_ext.types import EnumString
+
+_TRANSACTION_TIMEOUT = "75s"
 
 
 def _render_item(type_: str, obj: Any, autogen_context: Any) -> str | bool:
@@ -15,6 +17,15 @@ def _render_item(type_: str, obj: Any, autogen_context: Any) -> str | bool:
     return False
 
 
+def create_migration_engine(settings_url: str) -> Engine:
+    sync_url = settings_url.replace("+asyncpg", "+psycopg").replace("?ssl=", "?sslmode=")
+    return create_engine(
+        url=sync_url,
+        poolclass=pool.NullPool,
+        connect_args={"options": f"-c transaction_timeout={_TRANSACTION_TIMEOUT}"},
+    )
+
+
 def run_alembic(settings_url: str, target_metadata: MetaData) -> None:
     # NOTE @sosov: Sync psycopg instead of async asyncpg — asyncio.run() hangs on
     # shutdown due to SSL transport cleanup bug in asyncpg.
@@ -23,8 +34,7 @@ def run_alembic(settings_url: str, target_metadata: MetaData) -> None:
     if config.config_file_name is not None:
         fileConfig(config.config_file_name)
 
-    sync_url = settings_url.replace("+asyncpg", "+psycopg").replace("?ssl=", "?sslmode=")
-    engine = create_engine(url=sync_url, poolclass=pool.NullPool)
+    engine = create_migration_engine(settings_url=settings_url)
 
     try:
         with engine.connect() as connection:
