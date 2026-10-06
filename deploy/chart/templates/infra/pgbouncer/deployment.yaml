@@ -5,7 +5,7 @@ metadata:
   labels:
     app: pgbouncer
   annotations:
-    argocd.argoproj.io/sync-wave: {{ .Values.pgbouncer.meta.argocd.syncWave | quote }}
+    argocd.argoproj.io/sync-wave: {{ .Values.infra.pgbouncer.meta.argocd.syncWave | quote }}
 spec:
   replicas: 2
   strategy:
@@ -18,7 +18,7 @@ spec:
       labels:
         app: pgbouncer
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/pgbouncer/configmap.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/infra/pgbouncer/configmap.yaml") . | sha256sum }}
     spec:
       # NOTE @sosov: Lets the userlist-reloader container send SIGHUP to PgBouncer.
       shareProcessNamespace: true

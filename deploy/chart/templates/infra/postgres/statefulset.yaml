@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.infra.postgres.meta.argocd.syncWave | quote }}
+spec:
+  replicas: 1
+  podManagementPolicy: Parallel
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Delete
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      terminationGracePeriodSeconds: 60
+      enableServiceLinks: false
+      containers:
+        - name: postgres
+          image: postgres:18.6-trixie@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
+          ports:
+            - name: postgresql
+              containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: SUPERUSER_PASSWORD
+            - name: APP_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: APP_PASSWORD
+          readinessProbe:
+            exec:
+              command: [pg_isready, -h, 127.0.0.1, -p, "5432"]
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              memory: 1Gi
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql
+            - name: initdb
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: initdb
+          configMap:
+            name: postgres-initdb
+            defaultMode: 0555
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: pgdata
+      spec:
+        accessModes: [ReadWriteOnce]
+        storageClassName: postgres-gp3
+        resources:
+          requests:
+            storage: 10Gi

@@ -16,16 +16,23 @@ infra:
   externalSecrets:
     serviceAccount:
       roleArn: ""
-  frontend:
-    secrets:
+    frontend:
       prefix: ""
-  pgbouncer:
-    secrets:
+    pgbouncer:
       prefix: ""
-  services:
-    ticketmaster:
-      secrets:
+    postgres:
+      prefix: ""
+    services:
+      ticketmaster:
         prefix: ""
+  pgbouncer:
+    meta:
+      argocd:
+        syncWave: 0
+  postgres:
+    meta:
+      argocd:
+        syncWave: 0
 
 frontend:
   meta:
@@ -41,14 +48,6 @@ ingress:
     argocd:
       syncWave: 0
     certificateArn: ""
-
-pgbouncer:
-  meta:
-    argocd:
-      syncWave: 0
-    tiger:
-      host: ""
-      port: ""
 
 services:
   ticketmaster:

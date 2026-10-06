@@ -25,5 +25,5 @@ def init_sqlmodel_engine(db_url: str) -> AsyncEngine:
         pool_timeout=30,
         pool_pre_ping=True,
         pool_recycle=1800,
-        connect_args={"command_timeout": 15, "server_settings": {"application_name": "ticketmaster-http"}},
+        connect_args={"server_settings": {"application_name": "ticketmaster-http", "statement_timeout": "15s"}},
     )

@@ -4,7 +4,8 @@ set -euo pipefail
 # NOTE @sosov: Full teardown of the test-eu EKS stand to stop node/control-plane/ALB
 # billing between test sessions. Everything this script deletes is recreated by
 # test-stand-up.sh; everything it leaves alone (IAM roles, KMS, Cognito, ECR,
-# SSM/Secrets Manager, Postgres/Redis) is either free or holds data.
+# SSM/Secrets Manager, Redis) is either free or holds data. The in-cluster Postgres is
+# throwaway: its PVCs are deleted explicitly, because EBS volumes can outlive delete-cluster.
 
 AWS_REGION="eu-central-1"
 CLUSTER_NAME="ticketmaster-test-eu"
@@ -25,13 +26,22 @@ fi
 echo "==> Updating kubeconfig for ${CLUSTER_NAME}"
 aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$AWS_REGION" >/dev/null
 
-echo "==> Suspending Argo CD auto-sync (so selfHeal can't recreate the Ingress)"
+echo "==> Suspending Argo CD auto-sync (so selfHeal can't recreate the Ingress or the Postgres StatefulSet)"
 kubectl -n argocd patch application application-test-eu --type merge \
   -p '{"spec":{"syncPolicy":{"automated":null}}}' 2>/dev/null \
   || echo "    Application application-test-eu not found — skipping"
 
 echo "==> Deleting the Ingress and waiting for the ALB to be destroyed"
 kubectl delete ingress ticketmaster --ignore-not-found --timeout=5m
+
+echo "==> Deleting the Postgres StatefulSet and its PVCs (EBS volumes may outlive delete-cluster)"
+PG_PVS="$(kubectl get pvc -l app=postgres -o jsonpath='{.items[*].spec.volumeName}' 2>/dev/null || true)"
+kubectl delete statefulset postgres --ignore-not-found --cascade=foreground --timeout=5m
+kubectl delete pvc -l app=postgres --ignore-not-found --timeout=5m
+for PV in $PG_PVS; do
+  kubectl wait --for=delete "pv/${PV}" --timeout=5m \
+    || echo "    PV ${PV} still present — check for a leaked EBS volume after teardown"
+done
 
 echo "==> Deleting the cluster's IAM OIDC provider"
 OIDC_ISSUER_ID="$(aws eks describe-cluster --name "$CLUSTER_NAME" \
@@ -48,10 +58,12 @@ cat <<EOF
 
 Test stand is down.
 
+Deleted: the in-cluster Postgres and its volume (throwaway data).
+
 Kept (not billed meaningfully, or holds data): IAM roles, KMS keys,
 Secrets Manager secrets, SSM parameters, Cognito user pool, ECR images,
-the Cognito pre-signup Lambda stack, your Postgres/Redis (external to
-this account), the as-ticketmaster.com domain registration + hosted
+the Cognito pre-signup Lambda stack, your Redis (external to this
+account), the as-ticketmaster.com domain registration + hosted
 zone, and the ACM certificate (auto-renews via its kept validation
 CNAME). The test-eu.as-ticketmaster.com alias now points at a deleted
 ALB until the next test-stand-up re-points it — harmless.

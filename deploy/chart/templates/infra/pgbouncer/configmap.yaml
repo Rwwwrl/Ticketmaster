@@ -5,11 +5,11 @@ metadata:
   labels:
     app: pgbouncer
   annotations:
-    argocd.argoproj.io/sync-wave: {{ .Values.pgbouncer.meta.argocd.syncWave | quote }}
+    argocd.argoproj.io/sync-wave: {{ .Values.infra.pgbouncer.meta.argocd.syncWave | quote }}
 data:
   pgbouncer.ini: |
     [databases]
-    ticketmaster = host={{ .Values.pgbouncer.meta.tiger.host }} port={{ .Values.pgbouncer.meta.tiger.port }} dbname=tsdb
+    ticketmaster = host=postgres.default.svc.cluster.local port=5432 dbname=ticketmaster
 
     [pgbouncer]
     listen_addr = 0.0.0.0
@@ -18,3 +18,4 @@ data:
     pool_mode = transaction
     ; > 0 keeps asyncpg's statement cache working.
     max_prepared_statements = 200
+    track_extra_parameters = IntervalStyle, statement_timeout
