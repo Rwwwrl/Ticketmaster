@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from libs.aws.session import bind_task_role_to_aws_session
 from libs.common.enums import AppNameEnum, ServiceNameEnum
-from libs.fastapi_ext.exception_handlers import statement_timeout_exception_handler
+from libs.fastapi_ext.exception_handlers import database_exception_handler
 from libs.fastapi_ext.middlewares import (
     RequestBodyLimitMiddleware,
     RequestIdMiddleware,
@@ -19,7 +19,7 @@ from libs.redis_ext import redis_proxy
 from libs.redis_ext.utils import health_check as redis_health_check
 from libs.sentry_ext import setup_sentry
 from libs.settings import is_data_sensitive_env
-from libs.sqlmodel_ext import Session
+from libs.sqlmodel_ext import ReadSession, SessionPrimary
 from libs.sqlmodel_ext.utils import health_check as postgres_health_check
 from redis.asyncio import Redis
 from sqlalchemy.exc import DBAPIError
@@ -40,9 +40,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     setup_sentry(settings=settings, release=settings.version)
 
-    engine = init_sqlmodel_engine(db_url=settings.postgres_pooler_db_url)
-    Session.configure(bind=engine)
-    app.state.sqlmodel_engine = engine
+    primary_engine = init_sqlmodel_engine(db_url=settings.postgres_pooler_db_url)
+    SessionPrimary.configure(bind=primary_engine)
+    app.state.sqlmodel_primary_engine = primary_engine
+
+    reader_engine = init_sqlmodel_engine(db_url=settings.postgres_pooler_ro_db_url)
+    ReadSession.configure(bind=reader_engine)
+    app.state.sqlmodel_reader_engine = reader_engine
 
     redis_proxy.configure_with_client(client=Redis.from_url(url=settings.redis_url, decode_responses=False))
     app.state.redis = redis_proxy.redis
@@ -58,7 +62,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     await redis_proxy.redis.aclose()
-    await engine.dispose()
+    await primary_engine.dispose()
+    await reader_engine.dispose()
 
 
 _is_sensitive = is_data_sensitive_env(environment=settings.environment)
@@ -73,7 +78,7 @@ app = FastAPI(
     openapi_url=None if _is_sensitive else "/api/openapi.json",
 )
 
-app.add_exception_handler(DBAPIError, statement_timeout_exception_handler)
+app.add_exception_handler(DBAPIError, database_exception_handler)
 
 app.add_middleware(UnhandledExceptionMiddleware)
 app.add_middleware(RequestTimeoutMiddleware, timeout_seconds=20)
@@ -90,7 +95,7 @@ async def health_check() -> dict[str, str]:
 
 @app.get("/readiness-check")
 async def readiness_check() -> dict[str, str]:
-    await postgres_health_check()
+    await postgres_health_check(session_maker=ReadSession)
     await redis_health_check()
     return {"status": "ok"}
 

@@ -8,7 +8,7 @@ from fastapi import Header, HTTPException, Query, status
 from jwt.algorithms import RSAAlgorithm
 from libs.aws.kms_public_key_cache import KMSPublicKeyCache
 from libs.common.services import decode_service_cursor
-from libs.sqlmodel_ext import Session
+from libs.sqlmodel_ext import SessionPrimary
 
 from ticketmaster.cursors import EventCursorDTO
 from ticketmaster.exceptions import UserNotFoundException
@@ -189,7 +189,7 @@ async def validate_user_jwt(authorization: str = Header(...)) -> BaseUserDTO:
     if not isinstance(cognito_username, str) or not cognito_username:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         try:
             return await UserRepository.get_by_pool_and_cognito_username(
                 session=session,

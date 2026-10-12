@@ -167,7 +167,7 @@ def _clear_cognito_cache() -> Iterator[None]:
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_validate_user_jwt_when_valid_token_and_user_exists_returns_dto(
-    sqlmodel_engine: AsyncEngine,
+    sqlmodel_primary_engine: AsyncEngine,
     respx_mock: respx.MockRouter,
 ) -> None:
     private_key = _make_keypair()

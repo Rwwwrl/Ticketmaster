@@ -10,7 +10,7 @@ import pytest_asyncio
 from fastapi import FastAPI
 from httpx import AsyncClient
 from libs.aws.session import aws_session
-from libs.sqlmodel_ext import Session
+from libs.sqlmodel_ext import SessionPrimary
 from sqlmodel import select
 from ticketmaster.enums import TicketStatusEnum
 from ticketmaster.http.v1.dependencies import validate_user_jwt
@@ -21,7 +21,7 @@ from ticketmaster.tests.factories import EventFactory, TicketFactory, UserFactor
 
 @pytest_asyncio.fixture
 async def signed_in_user_in_db(fastapi_app: FastAPI) -> AsyncIterator[BaseUserDTO]:
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         user = UserFactory.build()
         session.add(user)
         await session.flush()
@@ -46,7 +46,7 @@ def mock_cognito(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
 
 
 async def _seed_ticket(*, user_id: int, status_: TicketStatusEnum) -> int:
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         event = EventFactory.build()
         session.add(event)
         await session.flush()
@@ -79,7 +79,7 @@ async def test_delete_me_when_no_tickets_returns_204_and_deletes_user(
         Username=signed_in_user_in_db.cognito_username,
     )
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         result = await session.exec(select(User).where(User.id == signed_in_user_in_db.id))
         assert result.first() is None
 
@@ -95,7 +95,7 @@ async def test_delete_me_when_user_has_reserved_tickets_releases_them(
     response = await async_client.delete(url="/api/v1/me/", headers={"Authorization": "Bearer fake"})
 
     assert response.status_code == 204
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         ticket = (await session.exec(select(Ticket).where(Ticket.id == ticket_id))).one()
         assert ticket.status == TicketStatusEnum.AVAILABLE
         assert ticket.user_id is None
@@ -113,7 +113,7 @@ async def test_delete_me_when_user_has_booked_tickets_marks_anonymous_booked(
     response = await async_client.delete(url="/api/v1/me/", headers={"Authorization": "Bearer fake"})
 
     assert response.status_code == 204
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         ticket = (await session.exec(select(Ticket).where(Ticket.id == ticket_id))).one()
         assert ticket.status == TicketStatusEnum.ANONYMOUS_BOOKED
         assert ticket.user_id is None

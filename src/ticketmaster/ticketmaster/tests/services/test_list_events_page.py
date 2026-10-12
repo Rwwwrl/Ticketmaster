@@ -5,7 +5,7 @@ import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 from libs.common.services import create_service_cursor, decode_service_cursor, encode_service_cursor
-from libs.sqlmodel_ext import Session
+from libs.sqlmodel_ext import SessionPrimary
 from libs.tests_ext.factories import insert
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
@@ -69,7 +69,7 @@ async def test_list_events_page_serves_from_cache_when_db_row_changes_underneath
     warmup_response = await async_client.get(url="/api/v1/events/", params={"sort_key": "start_at"})
     assert warmup_response.status_code == 200
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         await session.exec(update(Event).where(Event.id == event.id).values(name="Modified Name"))
 
     second_response = await async_client.get(url="/api/v1/events/", params={"sort_key": "start_at"})

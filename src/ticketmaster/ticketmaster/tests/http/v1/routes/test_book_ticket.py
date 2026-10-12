@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from httpx import AsyncClient
 from libs.datetime_ext.utils import utc_now
-from libs.sqlmodel_ext import Session
+from libs.sqlmodel_ext import SessionPrimary
 from libs.tests_ext.factories import insert
 from ticketmaster.enums import TicketStatusEnum
 from ticketmaster.models import User
@@ -35,7 +35,7 @@ async def test_book_ticket_when_fresh_reservation_by_caller_returns_204(
 
     assert response.status_code == 204
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = await TicketRepository.get_by_id(session=session, ticket_id=ticket.id)
 
     assert persisted.status == TicketStatusEnum.BOOKED
@@ -66,7 +66,7 @@ async def test_book_ticket_when_reservation_expired_returns_400(
     assert response.status_code == 400
     assert response.json() == {"detail": "Ticket not bookable"}
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = await TicketRepository.get_by_id(session=session, ticket_id=ticket.id)
 
     assert persisted.status == TicketStatusEnum.RESERVED
@@ -95,7 +95,7 @@ async def test_book_ticket_when_reserved_by_other_user_returns_400(
 
     assert response.status_code == 400
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = await TicketRepository.get_by_id(session=session, ticket_id=ticket.id)
 
     assert persisted.status == TicketStatusEnum.RESERVED
@@ -117,7 +117,7 @@ async def test_book_ticket_when_ticket_is_available_returns_400(
 
     assert response.status_code == 400
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = await TicketRepository.get_by_id(session=session, ticket_id=ticket.id)
 
     assert persisted.status == TicketStatusEnum.AVAILABLE
@@ -145,7 +145,7 @@ async def test_book_ticket_when_already_booked_returns_400(
 
     assert response.status_code == 400
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = await TicketRepository.get_by_id(session=session, ticket_id=ticket.id)
 
     assert persisted.status == TicketStatusEnum.BOOKED
@@ -173,7 +173,7 @@ async def test_book_ticket_when_path_event_id_does_not_match_returns_400(
 
     assert response.status_code == 400
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = await TicketRepository.get_by_id(session=session, ticket_id=ticket.id)
 
     assert persisted.status == TicketStatusEnum.RESERVED
@@ -209,7 +209,7 @@ async def test_reserve_then_book_two_step_flow_returns_204(
     book_response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/book")
     assert book_response.status_code == 204
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = await TicketRepository.get_by_id(session=session, ticket_id=ticket.id)
 
     assert persisted.status == TicketStatusEnum.BOOKED

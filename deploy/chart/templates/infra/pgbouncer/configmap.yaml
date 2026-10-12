@@ -10,6 +10,7 @@ data:
   pgbouncer.ini: |
     [databases]
     ticketmaster = host=postgres-primary.default.svc.cluster.local port=5432 dbname=ticketmaster
+    ticketmaster_ro = host=postgres-replica.default.svc.cluster.local port=5432 dbname=ticketmaster
 
     [pgbouncer]
     listen_addr = 0.0.0.0

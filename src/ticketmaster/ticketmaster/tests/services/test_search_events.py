@@ -1,6 +1,6 @@
 import pytest
 from libs.common.services import decode_service_cursor
-from libs.sqlmodel_ext import Session
+from libs.sqlmodel_ext import SessionPrimary
 from libs.tests_ext.factories import insert
 from sqlalchemy.ext.asyncio import AsyncEngine
 from ticketmaster.cursors import EventCursorDTO
@@ -10,10 +10,10 @@ from ticketmaster.tests.factories import EventFactory
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_search_events_when_no_matches(sqlmodel_engine: AsyncEngine) -> None:
+async def test_search_events_when_no_matches(sqlmodel_primary_engine: AsyncEngine) -> None:
     await insert(EventFactory(name="Lakers vs Celtics", description="NBA regular season"))
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         items, next_cursor = await search_events(
             session=session,
             q="coldplay",
@@ -26,12 +26,12 @@ async def test_search_events_when_no_matches(sqlmodel_engine: AsyncEngine) -> No
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_search_events_when_match_in_name(sqlmodel_engine: AsyncEngine) -> None:
+async def test_search_events_when_match_in_name(sqlmodel_primary_engine: AsyncEngine) -> None:
     match = EventFactory(name="Coldplay Live", description="Tour stop")
     noise = EventFactory(name="Lakers vs Celtics", description="NBA game")
     await insert(match, noise)
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         items, next_cursor = await search_events(
             session=session,
             q="coldplay",
@@ -44,12 +44,12 @@ async def test_search_events_when_match_in_name(sqlmodel_engine: AsyncEngine) ->
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_search_events_when_match_in_description(sqlmodel_engine: AsyncEngine) -> None:
+async def test_search_events_when_match_in_description(sqlmodel_primary_engine: AsyncEngine) -> None:
     match = EventFactory(name="Friday concert", description="Held at Wembley stadium")
     noise = EventFactory(name="Lakers vs Celtics", description="NBA game")
     await insert(match, noise)
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         items, next_cursor = await search_events(
             session=session,
             q="stadium",
@@ -62,12 +62,12 @@ async def test_search_events_when_match_in_description(sqlmodel_engine: AsyncEng
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_search_events_when_name_outranks_description(sqlmodel_engine: AsyncEngine) -> None:
+async def test_search_events_when_name_outranks_description(sqlmodel_primary_engine: AsyncEngine) -> None:
     name_match = EventFactory(name="Rock festival", description="Outdoor venue")
     description_match = EventFactory(name="Summer Gala", description="A rock-themed evening")
     await insert(name_match, description_match)
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         items, next_cursor = await search_events(
             session=session,
             q="rock",
@@ -80,13 +80,13 @@ async def test_search_events_when_name_outranks_description(sqlmodel_engine: Asy
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_search_events_when_cursor_walk(sqlmodel_engine: AsyncEngine) -> None:
+async def test_search_events_when_cursor_walk(sqlmodel_primary_engine: AsyncEngine) -> None:
     first = EventFactory(name="Coldplay world tour", description="A")
     second = EventFactory(name="Coldplay tribute", description="B")
     third = EventFactory(name="Symphony night", description="Coldplay covers")
     await insert(first, second, third)
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         first_items, first_next_cursor = await search_events(
             session=session,
             q="coldplay",
@@ -101,7 +101,7 @@ async def test_search_events_when_cursor_walk(sqlmodel_engine: AsyncEngine) -> N
         secret=settings.secret,
     )
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         second_items, second_next_cursor = await search_events(
             session=session,
             q="coldplay",
@@ -116,7 +116,7 @@ async def test_search_events_when_cursor_walk(sqlmodel_engine: AsyncEngine) -> N
         secret=settings.secret,
     )
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         third_items, third_next_cursor = await search_events(
             session=session,
             q="coldplay",

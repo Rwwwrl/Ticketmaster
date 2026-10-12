@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 import pytest
 from httpx import AsyncClient
-from libs.sqlmodel_ext import Session
+from libs.sqlmodel_ext import SessionPrimary
 from libs.tests_ext.factories import insert
 from redis.asyncio import Redis
 from sqlmodel import select
@@ -38,7 +38,7 @@ async def test_update_event_when_single_field_returns_200_and_only_changes_that_
     assert body.type == EventTypeEnum.CONCERT
     assert body.start_at == datetime(2026, 6, 2, 20, 0, tzinfo=UTC)
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = (await session.exec(select(Event).where(Event.id == event.id))).first()
 
         assert persisted.name == "Coldplay — Rescheduled"

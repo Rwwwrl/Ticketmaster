@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from libs.sqlmodel_ext import Session
+from libs.sqlmodel_ext import ReadSession, SessionPrimary
 from sqlalchemy.exc import IntegrityError
 
 from ticketmaster import consts, services
@@ -35,7 +35,7 @@ async def create_user_fallback(
     payload: request_schemas.CreateUserFallbackRequestSchema,
 ) -> response_schemas.UserResponseSchema:
     try:
-        async with Session() as session, session.begin():
+        async with SessionPrimary() as session, session.begin():
             dto = await UserRepository.create(
                 session=session,
                 uuid=payload.uuid,
@@ -67,7 +67,7 @@ async def get_me(
 async def delete_me(
     user: Annotated[BaseUserDTO, Depends(validate_user_jwt)],
 ) -> Response:
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         await services.delete_user(session=session, user=user)
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -84,7 +84,7 @@ async def list_events_page(
     page_size: Annotated[EventPageSizeEnum, Query()] = EventPageSizeEnum.MOBILE,
 ) -> response_schemas.EventsPageResponseSchema:
     try:
-        async with Session() as session, session.begin():
+        async with ReadSession() as session, session.begin():
             items, next_cursor = await services.list_events_page(
                 session=session,
                 sort_key=sort_key,
@@ -112,7 +112,7 @@ async def search_events(
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> response_schemas.EventsPageResponseSchema:
     try:
-        async with Session() as session, session.begin():
+        async with ReadSession() as session, session.begin():
             items, next_cursor = await services.search_events(
                 session=session,
                 q=q,
@@ -136,7 +136,7 @@ async def search_events(
 )
 async def get_event_by_id(event_id: int) -> response_schemas.EventResponseSchema:
     try:
-        async with Session() as session, session.begin():
+        async with ReadSession() as session, session.begin():
             event = await services.get_event_by_id(session=session, _id=event_id)
     except EventNotFoundException:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
@@ -150,7 +150,7 @@ async def get_event_by_id(event_id: int) -> response_schemas.EventResponseSchema
     response_model=list[response_schemas.TicketResponseSchema],
 )
 async def list_event_tickets(event_id: int) -> list[response_schemas.TicketResponseSchema]:
-    async with Session() as session, session.begin():
+    async with ReadSession() as session, session.begin():
         items = await TicketRepository.get_all_by_event_id(session=session, event_id=event_id)
 
     return [ToTicketResponseSchemaSerializer.serialize(dto=dto) for dto in items]
@@ -165,7 +165,7 @@ async def reserve_ticket(
     ticket_id: int,
     user: Annotated[BaseUserDTO, Depends(validate_user_jwt)],
 ) -> None:
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         ticket_reserved = await TicketRepository.reserve(
             session=session,
             event_id=event_id,
@@ -189,7 +189,7 @@ async def book_ticket(
     ticket_id: int,
     user: Annotated[BaseUserDTO, Depends(validate_user_jwt)],
 ) -> None:
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         ticket_booked = await TicketRepository.book(
             session=session,
             event_id=event_id,

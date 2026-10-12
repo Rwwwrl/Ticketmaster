@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from libs.sqlmodel_ext import Session
+from libs.sqlmodel_ext import SessionPrimary
 
 from ticketmaster.admin import services
 from ticketmaster.admin.exceptions import EventHasTicketsException, UnsupportedS3ObjectException
@@ -22,7 +22,7 @@ admin_router = APIRouter()
 async def create_event(
     payload: request_schemas.CreateEventRequestSchema,
 ) -> response_schemas.EventResponseSchema:
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         dto = await services.create_event(
             session=session,
             name=payload.name,
@@ -49,7 +49,7 @@ async def update_event(
     changes = payload.model_dump(exclude_unset=True)
 
     try:
-        async with Session() as session, session.begin():
+        async with SessionPrimary() as session, session.begin():
             dto = await services.update_event(session=session, event_id=event_id, changes=changes)
     except EventNotFoundException:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
@@ -64,7 +64,7 @@ async def update_event(
 )
 async def delete_event(event_id: int) -> Response:
     try:
-        async with Session() as session, session.begin():
+        async with SessionPrimary() as session, session.begin():
             await services.delete_event(session=session, event_id=event_id)
     except EventNotFoundException:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
@@ -84,7 +84,7 @@ async def create_event_trailer_upload_link(
     event_id: int,
 ) -> admin_response_schemas.EventTrailerUploadLinkResponseSchema:
     try:
-        async with Session() as session, session.begin():
+        async with SessionPrimary() as session, session.begin():
             return await services.create_event_trailer_upload_link(session=session, event_id=event_id)
     except EventNotFoundException:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
@@ -97,7 +97,7 @@ async def create_event_trailer_upload_link(
 )
 async def process_s3_event(payload: request_schemas.S3EventRequestSchema) -> Response:
     try:
-        async with Session() as session, session.begin():
+        async with SessionPrimary() as session, session.begin():
             await services.process_s3_event(
                 session=session,
                 bucket=payload.bucket,

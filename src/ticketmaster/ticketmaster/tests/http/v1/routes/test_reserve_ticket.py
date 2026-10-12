@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from httpx import AsyncClient
 from libs.datetime_ext.utils import utc_now
-from libs.sqlmodel_ext import Session
+from libs.sqlmodel_ext import SessionPrimary
 from libs.tests_ext.factories import insert
 from ticketmaster.enums import TicketStatusEnum
 from ticketmaster.models import User
@@ -28,7 +28,7 @@ async def test_reserve_ticket_when_available_returns_204(
     response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/reserve")
 
     assert response.status_code == 204
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = await TicketRepository.get_by_id(session=session, ticket_id=ticket.id)
     assert persisted.status == TicketStatusEnum.RESERVED
     assert persisted.user_id == override_user_jwt.id
@@ -57,7 +57,7 @@ async def test_reserve_ticket_when_reserved_fresh_by_other_user_returns_400(
 
     assert response.status_code == 400
     assert response.json() == {"detail": "Ticket not reservable"}
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = await TicketRepository.get_by_id(session=session, ticket_id=ticket.id)
     assert persisted.status == TicketStatusEnum.RESERVED
     assert persisted.user_id == other_user.id
@@ -84,7 +84,7 @@ async def test_reserve_ticket_when_reserved_expired_returns_204(
     response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/reserve")
 
     assert response.status_code == 204
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = await TicketRepository.get_by_id(session=session, ticket_id=ticket.id)
     assert persisted.status == TicketStatusEnum.RESERVED
     assert persisted.user_id == override_user_jwt.id
@@ -112,7 +112,7 @@ async def test_reserve_ticket_when_booked_returns_400(
     response = await async_client.post(url=f"/api/v1/events/{event.id}/tickets/{ticket.id}/reserve")
 
     assert response.status_code == 400
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = await TicketRepository.get_by_id(session=session, ticket_id=ticket.id)
     assert persisted.status == TicketStatusEnum.BOOKED
     assert persisted.user_id == other_user.id

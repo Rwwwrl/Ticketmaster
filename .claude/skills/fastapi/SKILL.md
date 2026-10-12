@@ -26,10 +26,11 @@ Use either `routes -> repositories -> models` or `routes -> services -> reposito
 5. Open the transaction at the route boundary:
 
    ```python
-   async with Session() as session, session.begin():
+   async with SessionPrimary() as session, session.begin():
        dto = await EventRepository.get_by_id(session=session, _id=event_id)
    ```
 
+   Use `ReadSession()` instead of `SessionPrimary()` only for stale-tolerant reads that don't feed a write (see the `sqlmodel` skill).
 6. Pass the session into the repository directly, or into a service when business logic warrants one. Do not commit inside services or repositories.
 7. Translate expected domain exceptions to `HTTPException` at the HTTP boundary. Do not leak database or cache exceptions.
 8. Serialize DTOs into response schemas through `serializers.py`. Do not return ORM models.
@@ -43,12 +44,12 @@ Use keyword arguments, mandatory type annotations, and async I/O. Prefix module 
 The production lifespan must:
 
 - Configure logging and Sentry.
-- Initialize the async SQLModel engine and bind the global `Session`.
+- Initialize two async SQLModel engines (`POSTGRES_POOLER_DB_URL` → `SessionPrimary`, `POSTGRES_POOLER_RO_DB_URL` → `ReadSession`).
 - Configure async Redis with `decode_responses=False`.
 - Bind optional task-role credentials (`aws_task_role`, local-dev only — production runs on EKS Pod Identity, so the block is `None` there and this step is skipped).
-- Close Redis and dispose the engine on shutdown.
+- Close Redis and dispose both engines on shutdown.
 
-Keep `/health-check` dependency-free for liveness. Keep `/readiness-check` dependent on PostgreSQL and Redis. Keep docs and OpenAPI disabled in data-sensitive environments.
+Keep `/health-check` dependency-free for liveness. Keep `/readiness-check` dependent on PostgreSQL (via `ReadSession`, so pods stay Ready during a primary failover while a replica is up) and Redis. `database_exception_handler` (`libs.fastapi_ext.exception_handlers`) maps `DBAPIError`: statement timeout → 504, connectivity errors (invalidated connection, SQLSTATE `08*`/`57P01-03`/`25006`) → 503 with `Retry-After`; anything else is re-raised. Never auto-retry writes. Keep docs and OpenAPI disabled in data-sensitive environments.
 
 Preserve the shared middleware behavior and effective order: unhandled exceptions, security headers, request/response logging, request ID, and the 1 MiB request-body limit. Add focused middleware tests when changing it.
 
