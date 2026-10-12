@@ -31,6 +31,9 @@ infra:
     meta:
       argocd:
         syncWave: -8
+    image:
+      repository: 258167965416.dkr.ecr.eu-central-1.amazonaws.com/patroni
+      tag: 18.6-4.1.5-r1
 
 frontend:
   meta:

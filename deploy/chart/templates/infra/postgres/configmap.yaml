@@ -1,17 +1,45 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: postgres-initdb
+  name: postgres-patroni
   labels:
     app: postgres
   annotations:
     argocd.argoproj.io/sync-wave: {{ .Values.infra.postgres.meta.argocd.syncWave | quote }}
 data:
-  10-create-app-db.sh: |
+  patroni.yml: |
+    restapi:
+      listen: 0.0.0.0:8008
+    bootstrap:
+      dcs:
+        failsafe_mode: true
+        synchronous_mode: quorum
+        postgresql:
+          use_pg_rewind: true
+      post_bootstrap: /etc/patroni/post-bootstrap.sh
+    postgresql:
+      listen: 0.0.0.0:5432
+      data_dir: /var/lib/postgresql/18/main
+      authentication:
+        superuser:
+          username: postgres
+        replication:
+          username: replicator
+        rewind:
+          username: rewinder
+      pg_hba:
+        - local all all peer
+        - host all all 0.0.0.0/0 scram-sha-256
+        - host replication replicator 0.0.0.0/0 scram-sha-256
+      basebackup:
+        - checkpoint: fast
+      remove_data_directory_on_rewind_failure: true
+      remove_data_directory_on_diverged_timelines: true
+  post-bootstrap.sh: |
     #!/bin/bash
     set -euo pipefail
     : "${APP_DB_PASSWORD:?}"
-    psql -v ON_ERROR_STOP=1 --username postgres --dbname postgres -v app_password="$APP_DB_PASSWORD" <<'SQL'
+    psql -v ON_ERROR_STOP=1 -v app_password="$APP_DB_PASSWORD" "$1" <<'SQL'
     CREATE ROLE ticketmaster LOGIN PASSWORD :'app_password';
     CREATE DATABASE ticketmaster OWNER ticketmaster;
     SQL

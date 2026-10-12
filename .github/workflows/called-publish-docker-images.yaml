@@ -58,3 +58,19 @@ jobs:
               -t "$image" "$context"
             docker push "$image"
           done
+
+      - name: Build and push the Patroni image
+        env:
+          REGISTRY: ${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com
+        run: |
+          tag=$(yq '.infra.postgres.image.tag' deploy/chart/values.test.yaml)
+          if output=$(aws ecr describe-images --repository-name patroni --image-ids imageTag="$tag" 2>&1); then
+            echo "patroni:$tag already in ECR, skipping"
+          elif [[ "$output" == *ImageNotFoundException* ]]; then
+            image=$REGISTRY/patroni:$tag
+            docker build -t "$image" deploy/images/patroni
+            docker push "$image"
+          else
+            echo "$output"
+            exit 1
+          fi
