@@ -21,11 +21,13 @@ events = result.all()
 
 Use SQLAlchemy for engine/session-factory wiring, raw `text()`, DML expressions, explicit `Column` definitions, constraints, indexes, PostgreSQL-specific types, and Alembic operations. Use `session.execute(text(...))` for raw SQL; use `session.exec(...)` for SQLModel selects and repository DML.
 
-The canonical factory is `libs.sqlmodel_ext.Session`, configured as:
+The canonical factory is `libs.sqlmodel_ext.SessionPrimary`, configured as:
 
 ```python
-Session = async_sessionmaker(class_=AsyncSession, autobegin=False)
+SessionPrimary = async_sessionmaker(class_=AsyncSession, autobegin=False)
 ```
+
+`libs.sqlmodel_ext.ReadSession` is a second, identically configured factory bound to the reader engine (PgBouncer `ticketmaster_ro` → Patroni replicas). Use it only for reads that tolerate a little replication lag and do not feed a write in the same request (catalogue reads, ticket listings). Everything else — writes, `with_for_update()`, `validate_user_jwt`, `/me` (the user row may have just been created) — stays on `SessionPrimary`. A write sent through `ReadSession` fails with `cannot execute ... in a read-only transaction`.
 
 Always open an explicit `session.begin()` transaction at the route or entrypoint boundary. Pass the session downward. Never commit in a service or repository.
 
@@ -95,7 +97,7 @@ Start infrastructure when needed:
 just up-infra
 ```
 
-The shared fixture creates schema from `BaseSqlModel.metadata`, binds the global `Session`, and truncates declared tables between tests. Add every new table to `autocleared_sqlmodel_tables` in the service test configuration.
+The shared fixture creates schema from `BaseSqlModel.metadata`, binds both global sessionmakers (`SessionPrimary` and `ReadSession`) to the one test database, and truncates declared tables between tests. Add every new table to `autocleared_sqlmodel_tables` in the service test configuration.
 
 Use factories and `libs.tests_ext.factories.insert(...)`. Test constraints, mapping, not-found behavior, ordering, pagination boundaries, and atomic concurrency conditions. Also validate the Alembic heads and migration against a local database:
 

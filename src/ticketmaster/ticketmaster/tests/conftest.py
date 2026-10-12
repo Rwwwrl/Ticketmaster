@@ -25,9 +25,9 @@ def autocleared_sqlmodel_tables() -> list[type[BaseSqlModel]]:
 
 
 @pytest_asyncio.fixture(scope="session")
-async def fastapi_app(sqlmodel_engine: AsyncEngine, redis: Redis) -> AsyncGenerator[FastAPI]:
+async def fastapi_app(sqlmodel_primary_engine: AsyncEngine, redis: Redis) -> AsyncGenerator[FastAPI]:
     app = FastAPI()
-    app.state.sqlmodel_engine = sqlmodel_engine
+    app.state.sqlmodel_primary_engine = sqlmodel_primary_engine
     app.state.redis = redis
     app.include_router(router=v1_router, prefix="/api/v1")
     app.include_router(router=admin_router, prefix="/api/admin")

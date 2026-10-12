@@ -4,7 +4,7 @@ from uuid import UUID
 
 import pytest
 from httpx import AsyncClient
-from libs.sqlmodel_ext import Session
+from libs.sqlmodel_ext import SessionPrimary
 from redis.asyncio import Redis
 from sqlmodel import select
 from ticketmaster.enums import CurrencyEnum, EventTypeEnum
@@ -39,7 +39,7 @@ async def test_create_event_when_valid_payload_returns_201_and_persists(
     assert body.price == Decimal("49.99")
     assert body.currency == CurrencyEnum.EUR
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = (await session.exec(select(Event).where(Event.id == body.id))).first()
 
         assert persisted is not None

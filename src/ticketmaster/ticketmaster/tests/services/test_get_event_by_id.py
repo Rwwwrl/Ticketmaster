@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 import pytest
 from httpx import AsyncClient
-from libs.sqlmodel_ext import Session
+from libs.sqlmodel_ext import SessionPrimary
 from libs.tests_ext.factories import insert
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
@@ -56,7 +56,7 @@ async def test_get_event_by_id_serves_from_cache_when_db_row_changes_underneath(
     warmup_response = await async_client.get(url=f"/api/v1/events/{event.id}")
     assert warmup_response.status_code == 200
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         await session.exec(update(Event).where(Event.id == event.id).values(name="Modified Name"))
 
     second_response = await async_client.get(url=f"/api/v1/events/{event.id}")

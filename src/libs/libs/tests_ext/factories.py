@@ -1,8 +1,8 @@
-from libs.sqlmodel_ext import BaseSqlModel, Session
+from libs.sqlmodel_ext import BaseSqlModel, SessionPrimary
 
 
 async def insert(*models: BaseSqlModel) -> None:
-    """Persist all *models* in a single transaction via the global async ``Session``.
+    """Persist all *models* in a single transaction via the global async ``SessionPrimary``.
 
     Each instance is refreshed in place so server-assigned columns (``id``,
     timestamps) are populated, then expunged so attributes stay accessible
@@ -12,7 +12,7 @@ async def insert(*models: BaseSqlModel) -> None:
         event_2 = EventFactory(name="Macbeth")
         await insert(event_1, event_2)
     """
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         for model in models:
             session.add(model)
 

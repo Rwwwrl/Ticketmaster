@@ -53,7 +53,7 @@ Do not mock an internal repository merely to make an endpoint test easy when the
 The `libs.tests_ext.sqlmodel_fixtures` plugin:
 
 - Recreates a dedicated `test` database for the session.
-- Binds the global `Session`.
+- Binds the global `SessionPrimary`.
 - Creates tables from `BaseSqlModel.metadata`.
 - Truncates declared tables after each database-using test.
 
@@ -68,7 +68,7 @@ event = EventFactory()
 await insert(event)
 ```
 
-The helper flushes, refreshes, and expunges inserted models. For post-action assertions, open `Session()` directly and query the database. Test constraints at the database boundary in addition to HTTP validation.
+The helper flushes, refreshes, and expunges inserted models. For post-action assertions, open `SessionPrimary()` directly and query the database. Test constraints at the database boundary in addition to HTTP validation.
 
 ## Test Redis Behavior
 

@@ -6,7 +6,7 @@ from collections.abc import Iterator
 import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
-from libs.sqlmodel_ext import Session
+from libs.sqlmodel_ext import SessionPrimary
 from libs.tests_ext.factories import insert
 from redis.asyncio import Redis
 from sqlmodel import select
@@ -44,7 +44,7 @@ async def test_process_s3_event_when_event_trailer_persists_trailer_fields(
 
     assert response.status_code == 204
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = (await session.exec(select(Event).where(Event.id == event.id))).one()
         assert persisted.trailer_bucket == _BUCKET
         assert persisted.trailer_key == key
@@ -86,7 +86,7 @@ async def test_process_s3_event_when_kind_missing_is_a_noop(
 
     assert response.status_code == 204
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = (await session.exec(select(Event).where(Event.id == event.id))).one()
         assert persisted.trailer_bucket == event.trailer_bucket
         assert persisted.trailer_key == event.trailer_key
@@ -109,7 +109,7 @@ async def test_process_s3_event_when_kind_unknown_is_a_noop(
 
     assert response.status_code == 204
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = (await session.exec(select(Event).where(Event.id == event.id))).one()
         assert persisted.trailer_bucket == event.trailer_bucket
         assert persisted.trailer_key == event.trailer_key

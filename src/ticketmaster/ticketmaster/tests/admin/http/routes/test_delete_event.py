@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from httpx import AsyncClient
-from libs.sqlmodel_ext import Session
+from libs.sqlmodel_ext import SessionPrimary
 from libs.tests_ext.factories import insert
 from redis.asyncio import Redis
 from sqlmodel import select
@@ -26,7 +26,7 @@ async def test_delete_event_when_event_has_no_tickets_returns_204_and_deletes_ev
     assert response.status_code == 204
     assert response.content == b""
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted = (await session.exec(select(Event).where(Event.id == event.id))).first()
 
     assert persisted is None
@@ -90,7 +90,7 @@ async def test_delete_event_when_event_has_ticket_returns_409_and_preserves_data
     assert response.json() == {"detail": "Event has tickets"}
     assert current_namespace == previous_namespace
 
-    async with Session() as session, session.begin():
+    async with SessionPrimary() as session, session.begin():
         persisted_event = (await session.exec(select(Event).where(Event.id == event.id))).first()
         persisted_ticket = (await session.exec(select(Ticket).where(Ticket.id == ticket.id))).first()
 
