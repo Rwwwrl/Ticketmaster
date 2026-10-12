@@ -82,7 +82,7 @@ jobs:
             -strict \
             -summary \
             -schema-location default \
-            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/f3e4382095909ac60000da025f323ba44d4c738a/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
             "${{ runner.temp }}/rendered"
 
   lint_and_test:
