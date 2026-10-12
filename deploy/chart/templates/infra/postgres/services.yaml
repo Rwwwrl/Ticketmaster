@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: postgres
+  name: postgres-primary
   labels:
     app: postgres
   annotations:
@@ -10,6 +10,26 @@ spec:
   type: ClusterIP
   selector:
     app: postgres
+    role: primary
+  ports:
+    - name: postgresql
+      port: 5432
+      targetPort: postgresql
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-replica
+  labels:
+    app: postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.infra.postgres.meta.argocd.syncWave | quote }}
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+    role: replica
   ports:
     - name: postgresql
       port: 5432

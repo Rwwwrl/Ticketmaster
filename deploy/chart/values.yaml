@@ -33,6 +33,9 @@ infra:
     meta:
       argocd:
         syncWave: 0
+    image:
+      repository: ""
+      tag: 18.6-4.1.5-r1
 
 frontend:
   meta:
