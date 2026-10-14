@@ -8,6 +8,7 @@ from libs.redis_ext.settings import RedisSettingsMixin
 from libs.sentry_ext import SentrySettingsMixin
 from libs.settings import BaseAppSettings
 from libs.sqlmodel_ext.settings import PostgresSettingsMixin
+from libs.taskiq_ext import TaskIQSettingsMixin
 from pydantic_settings import SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,7 +21,14 @@ class AWSTaskRoleSettings(DTO):
     session_token: str | None = None
 
 
-class Settings(SentrySettingsMixin, LoggingSettingsMixin, PostgresSettingsMixin, RedisSettingsMixin, BaseAppSettings):
+class Settings(
+    SentrySettingsMixin,
+    LoggingSettingsMixin,
+    PostgresSettingsMixin,
+    RedisSettingsMixin,
+    TaskIQSettingsMixin,
+    BaseAppSettings,
+):
     model_config = SettingsConfigDict(extra="ignore", env_nested_delimiter="__")
     env_dev_yaml: ClassVar[Path] = BASE_DIR / "env.dev.yaml"
 

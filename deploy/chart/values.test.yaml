@@ -20,6 +20,8 @@ infra:
       prefix: ticketmaster/pgbouncer/test-eu
     postgres:
       prefix: ticketmaster/postgres/test-eu
+    rabbitmq:
+      prefix: ticketmaster/rabbitmq/test-eu
     services:
       ticketmaster:
         prefix: ticketmaster/ticketmaster/test-eu
@@ -34,6 +36,13 @@ infra:
     image:
       repository: 258167965416.dkr.ecr.eu-central-1.amazonaws.com/patroni
       tag: 18.6-4.1.5-r1
+  rabbitmq:
+    topology:
+      meta:
+        argocd:
+          syncWave: -5
+      image:
+        repository: 258167965416.dkr.ecr.eu-central-1.amazonaws.com/rabbitmq-topology
 
 frontend:
   meta:
@@ -62,6 +71,9 @@ services:
         minReplicas: 3
         maxReplicas: 5
         cpuTargetPercent: 70
+    backgroundTasks:
+      worker:
+        replicas: 2
     migrations:
       expand:
         meta:

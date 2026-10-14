@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rabbitmq-topology
+  labels:
+    app: rabbitmq-topology
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.infra.rabbitmq.topology.meta.argocd.syncWave | quote }}
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        app: rabbitmq-topology
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: topology
+          image: '{{ .Values.infra.rabbitmq.topology.image.repository }}:{{ .Values.commitSha }}'
+          command: ["poetry", "run", "python", "-m", "rabbitmq_topology.apply"]
+          envFrom:
+            - secretRef:
+                name: rabbitmq
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: 200m, memory: 256Mi}

@@ -40,11 +40,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     setup_sentry(settings=settings, release=settings.version)
 
-    primary_engine = init_sqlmodel_engine(db_url=settings.postgres_pooler_db_url)
+    primary_engine = init_sqlmodel_engine(
+        db_url=settings.postgres_pooler_db_url,
+        application_name="ticketmaster-http",
+    )
     SessionPrimary.configure(bind=primary_engine)
     app.state.sqlmodel_primary_engine = primary_engine
 
-    reader_engine = init_sqlmodel_engine(db_url=settings.postgres_pooler_ro_db_url)
+    reader_engine = init_sqlmodel_engine(
+        db_url=settings.postgres_pooler_ro_db_url,
+        application_name="ticketmaster-http",
+    )
     ReadSession.configure(bind=reader_engine)
     app.state.sqlmodel_reader_engine = reader_engine
 

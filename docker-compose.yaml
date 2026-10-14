@@ -31,9 +31,30 @@ services:
       timeout: 5s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:4.3.6-management
+    container_name: rabbitmq
+    # NOTE @sosov: A fixed hostname keeps the node name stable, so queues survive a container re-create.
+    hostname: rabbitmq
+    ports:
+      - "15672:5672"
+      - "25672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ticketmaster
+      RABBITMQ_DEFAULT_PASS: ticketmaster
+      RABBITMQ_DEFAULT_VHOST: ticketmaster
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
 volumes:
   postgres_data:
   redis_data:
+  rabbitmq_data:
 
 configs:
   init_sql:

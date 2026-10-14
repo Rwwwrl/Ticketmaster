@@ -12,6 +12,7 @@ requires = ["poetry-core"]
 python = "^3.14"
 ticketmaster-libs = {path = "src/libs", develop = true}
 ticketmaster = {path = "src/ticketmaster", develop = true}
+ticketmaster-rabbitmq-topology = {path = "src/rabbitmq_topology", develop = true}
 cognito-pre-signup-lambda = {path = "src/lambdas/cognito_pre_signup", develop = true}
 s3-events-lambda = {path = "src/lambdas/s3_events", develop = true}
 pre-commit = "^4.5.1"
@@ -24,7 +25,7 @@ pytest-cov = "^5.0.0"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "session"
-addopts = "--import-mode=importlib -p libs.tests_ext.sqlmodel_fixtures -p libs.tests_ext.redis_fixtures"
+addopts = "--import-mode=importlib -p libs.tests_ext.sqlmodel_fixtures -p libs.tests_ext.redis_fixtures -p libs.tests_ext.taskiq_fixtures"
 env = [
     "ENVIRONMENT=cicd",
     "SECRET=test-secret",
@@ -33,6 +34,7 @@ env = [
     "POSTGRES_POOLER_DB_URL=postgresql+asyncpg://postgres:postgres@localhost:15432/postgres",
     "POSTGRES_POOLER_RO_DB_URL=postgresql+asyncpg://postgres:postgres@localhost:15432/postgres",
     "REDIS_URL=redis://localhost:16379/15",
+    "RABBITMQ_URL=amqp://ticketmaster:ticketmaster@localhost:15672/ticketmaster",
     "AWS_REGION=eu-central-1",
     "CDN_DOMAIN=media.test-eu.as-ticketmaster.com",
     "LAMBDA_JWT_KMS_KEY_ARN=arn:aws:kms:eu-central-1:000000000000:key/test-placeholder",
@@ -51,6 +53,7 @@ env = [
 testpaths = [
     "src/libs/libs/tests",
     "src/ticketmaster/ticketmaster/tests",
+    "src/rabbitmq_topology/rabbitmq_topology/tests",
     "src/lambdas/cognito_pre_signup/tests",
     "src/lambdas/s3_events/tests",
 ]

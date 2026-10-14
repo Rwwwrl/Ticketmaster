@@ -6,7 +6,7 @@ from ticketmaster.utils import init_sqlmodel_engine
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_init_sqlmodel_engine_sets_statement_timeout_on_every_connection(settings: Settings) -> None:
-    engine = init_sqlmodel_engine(db_url=settings.postgres_pooler_db_url)
+    engine = init_sqlmodel_engine(db_url=settings.postgres_pooler_db_url, application_name="ticketmaster-test")
 
     try:
         async with engine.connect() as connection:

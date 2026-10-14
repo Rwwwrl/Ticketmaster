@@ -46,6 +46,7 @@ jobs:
           images=(
             "ticketmaster:src/ticketmaster"
             "frontend:frontend"
+            "rabbitmq-topology:src/rabbitmq_topology"
           )
 
           for entry in "${images[@]}"; do
