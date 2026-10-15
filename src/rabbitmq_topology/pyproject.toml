@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "ticketmaster-rabbitmq-topology"
+version = "0.1.0"
+description = "RabbitMQ topology (exchange and queues) for ticketmaster, and the Job that declares it"
+authors = ["Aleksei Sosov <forgithublesh@yandex.ru>"]
+packages = [{ include = "rabbitmq_topology" }]
+
+[tool.poetry.dependencies]
+python = "^3.14"
+taskiq-aio-pika = "^0.6.1"
+pydantic = "^2.14.1"
+aio-pika = "^10.1.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "session"
+addopts = "--import-mode=importlib"
+testpaths = ["rabbitmq_topology/tests"]

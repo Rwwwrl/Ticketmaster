@@ -11,3 +11,6 @@ class LogLevelEnum(StrEnum):
 
 class ProcessTypeEnum(StrEnum):
     FASTAPI = auto()
+    TASKIQ_WORKER = auto()
+    OUTBOX_RELAY = auto()
+    TASKIQ_SCHEDULER = auto()

@@ -16,7 +16,7 @@ def event_validate[T: BaseEventDTO | Event](_self: T) -> T:
     return _self
 
 
-def init_sqlmodel_engine(db_url: str) -> AsyncEngine:
+def init_sqlmodel_engine(db_url: str, application_name: str) -> AsyncEngine:
     return create_async_engine(
         url=db_url,
         echo=False,
@@ -25,5 +25,5 @@ def init_sqlmodel_engine(db_url: str) -> AsyncEngine:
         pool_timeout=30,
         pool_pre_ping=True,
         pool_recycle=1800,
-        connect_args={"server_settings": {"application_name": "ticketmaster-http", "statement_timeout": "15s"}},
+        connect_args={"server_settings": {"application_name": application_name, "statement_timeout": "15s"}},
     )

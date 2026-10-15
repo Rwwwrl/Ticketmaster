@@ -2,13 +2,15 @@ from unittest.mock import AsyncMock
 
 import pytest
 from httpx import AsyncClient
+from libs.fastapi_ext.consts import REQUEST_ID_HEADER
 from libs.sqlmodel_ext import SessionPrimary
 from libs.tests_ext.factories import insert
 from redis.asyncio import Redis
 from sqlmodel import select
 from ticketmaster.enums import S3BucketEnum, TicketStatusEnum
-from ticketmaster.models import Event, Ticket
+from ticketmaster.models import Event, OutboxMessage, Ticket
 from ticketmaster.redis_cache.repositories import NamespaceRepository
+from ticketmaster.schemas.task_messages import DeleteS3ObjectTaskMessage
 from ticketmaster.tests.factories import EventFactory, TicketFactory
 
 
@@ -31,17 +33,21 @@ async def test_delete_event_when_event_has_no_tickets_returns_204_and_deletes_ev
 
     assert persisted is None
 
-    mock_s3.delete_object.assert_awaited_once_with(
-        Bucket=S3BucketEnum.MEDIA_PUBLIC.value,
-        Key=event.trailer_key,
-    )
+    async with SessionPrimary() as session, session.begin():
+        [outbox_message] = (await session.exec(select(OutboxMessage))).all()
+        assert outbox_message.code == DeleteS3ObjectTaskMessage.code
+        delete_message = DeleteS3ObjectTaskMessage.model_validate(outbox_message.message)
+
+    assert str(delete_message.logical_id) == response.headers[REQUEST_ID_HEADER]
+    assert delete_message.bucket == S3BucketEnum.MEDIA_PUBLIC.value
+    assert delete_message.key == event.trailer_key
+    mock_s3.delete_object.assert_not_awaited()
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_delete_event_when_event_has_no_trailer_returns_204_and_skips_s3(
+async def test_delete_event_when_event_has_no_trailer_returns_204_and_adds_no_outbox_message(
     async_client: AsyncClient,
     bypass_admin_jwt: None,
-    mock_s3: AsyncMock,
 ) -> None:
     event = EventFactory(trailer_bucket=None, trailer_key=None)
     await insert(event)
@@ -49,7 +55,8 @@ async def test_delete_event_when_event_has_no_trailer_returns_204_and_skips_s3(
     response = await async_client.delete(url=f"/api/admin/events/{event.id}")
 
     assert response.status_code == 204
-    mock_s3.delete_object.assert_not_awaited()
+    async with SessionPrimary() as session, session.begin():
+        assert (await session.exec(select(OutboxMessage))).all() == []
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -57,7 +64,6 @@ async def test_delete_event_when_event_not_found_returns_404_and_keeps_namespace
     async_client: AsyncClient,
     redis: Redis,
     bypass_admin_jwt: None,
-    mock_s3: AsyncMock,
 ) -> None:
     previous_namespace = await NamespaceRepository.set(redis=redis)
 
@@ -67,7 +73,8 @@ async def test_delete_event_when_event_not_found_returns_404_and_keeps_namespace
     assert response.status_code == 404
     assert response.json() == {"detail": "Event not found"}
     assert current_namespace == previous_namespace
-    mock_s3.delete_object.assert_not_awaited()
+    async with SessionPrimary() as session, session.begin():
+        assert (await session.exec(select(OutboxMessage))).all() == []
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -75,7 +82,6 @@ async def test_delete_event_when_event_has_ticket_returns_409_and_preserves_data
     async_client: AsyncClient,
     redis: Redis,
     bypass_admin_jwt: None,
-    mock_s3: AsyncMock,
 ) -> None:
     event = EventFactory()
     await insert(event)
@@ -96,7 +102,8 @@ async def test_delete_event_when_event_has_ticket_returns_409_and_preserves_data
 
     assert persisted_event is not None
     assert persisted_ticket is not None
-    mock_s3.delete_object.assert_not_awaited()
+    async with SessionPrimary() as session, session.begin():
+        assert (await session.exec(select(OutboxMessage))).all() == []
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -104,7 +111,6 @@ async def test_delete_event_rotates_list_events_page_namespace(
     async_client: AsyncClient,
     redis: Redis,
     bypass_admin_jwt: None,
-    mock_s3: AsyncMock,
 ) -> None:
     event = EventFactory()
     await insert(event)

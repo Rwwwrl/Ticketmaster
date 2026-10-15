@@ -22,6 +22,8 @@ infra:
       prefix: ""
     postgres:
       prefix: ""
+    rabbitmq:
+      prefix: ""
     services:
       ticketmaster:
         prefix: ""
@@ -36,6 +38,13 @@ infra:
     image:
       repository: ""
       tag: 18.6-4.1.5-r1
+  rabbitmq:
+    topology:
+      meta:
+        argocd:
+          syncWave: 0
+      image:
+        repository: ""
 
 frontend:
   meta:
@@ -64,6 +73,11 @@ services:
         minReplicas: 1
         maxReplicas: 1
         cpuTargetPercent: 70
+    backgroundTasks:
+      worker:
+        replicas: 1
+      outboxRelay:
+        replicas: 2
     migrations:
       expand:
         meta:

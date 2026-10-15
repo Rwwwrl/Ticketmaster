@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ticketmaster-outbox-relay
+  labels:
+    app: ticketmaster-outbox-relay
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.services.ticketmaster.meta.argocd.syncWave | quote }}
+spec:
+  replicas: {{ .Values.services.ticketmaster.backgroundTasks.outboxRelay.replicas }}
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: ticketmaster-outbox-relay
+  template:
+    metadata:
+      labels:
+        app: ticketmaster-outbox-relay
+    spec:
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: ticketmaster-outbox-relay
+      containers:
+        - name: ticketmaster-outbox-relay
+          image: '{{ .Values.services.ticketmaster.image.repository }}:{{ .Values.commitSha }}'
+          command: ["poetry", "run", "python", "-m", "ticketmaster.background_tasks.outbox_relay"]
+          envFrom:
+            - secretRef:
+                name: ticketmaster
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
