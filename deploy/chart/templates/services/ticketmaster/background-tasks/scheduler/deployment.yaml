@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ticketmaster-scheduler
+  labels:
+    app: ticketmaster-scheduler
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.services.ticketmaster.meta.argocd.syncWave | quote }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ticketmaster-scheduler
+  template:
+    metadata:
+      labels:
+        app: ticketmaster-scheduler
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: ticketmaster-scheduler
+          image: '{{ .Values.services.ticketmaster.image.repository }}:{{ .Values.commitSha }}'
+          command: ["poetry", "run", "taskiq", "scheduler"]
+          args:
+            - "ticketmaster.background_tasks.scheduler:scheduler"
+            - "ticketmaster.background_tasks.tasks"
+            - "--skip-first-run"
+            - "--no-configure-logging"
+          envFrom:
+            - secretRef:
+                name: ticketmaster
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi

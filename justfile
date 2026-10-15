@@ -19,6 +19,10 @@ runrelay:
     poetry -C src/ticketmaster run python -m ticketmaster.background_tasks.outbox_relay
 
 [group('run')]
+runscheduler:
+    poetry -C src/ticketmaster run taskiq scheduler ticketmaster.background_tasks.scheduler:scheduler ticketmaster.background_tasks.tasks --skip-first-run --no-configure-logging
+
+[group('run')]
 rabbitmq-topology:
     poetry -C src/rabbitmq_topology run python -m rabbitmq_topology.apply
 

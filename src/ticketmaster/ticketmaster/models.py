@@ -88,3 +88,16 @@ class OutboxMessage(BaseSqlModel, table=True):
     id: int | None = Field(default=None, sa_column=Column(BigInteger, Identity()))
     code: int
     message: dict[str, Any] = Field(sa_type=JSONB)
+
+
+class InboxMessage(BaseSqlModel, table=True):
+    __tablename__ = "inbox_message"
+    __table_args__ = (
+        PrimaryKeyConstraint("id"),
+        Index("ix_inbox_message_logical_id_code", "logical_id", "code", unique=True),
+        Index("ix_inbox_message_created_at", "created_at"),
+    )
+
+    id: int | None = Field(default=None, sa_column=Column(BigInteger, Identity()))
+    code: int
+    logical_id: UUID

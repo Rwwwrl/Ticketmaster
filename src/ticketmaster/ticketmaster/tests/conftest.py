@@ -12,7 +12,7 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine
 from ticketmaster.admin.http.routes import admin_router
 from ticketmaster.http.v1.routes import v1_router
-from ticketmaster.models import Event, OutboxMessage, Ticket, User
+from ticketmaster.models import Event, InboxMessage, OutboxMessage, Ticket, User
 from ticketmaster.settings import Settings
 from ticketmaster.settings import settings as ticketmaster_settings
 
@@ -24,7 +24,7 @@ def settings() -> Settings:
 
 @pytest.fixture(scope="session")
 def autocleared_sqlmodel_tables() -> list[type[BaseSqlModel]]:
-    return [Ticket, User, Event, OutboxMessage]
+    return [Ticket, User, Event, OutboxMessage, InboxMessage]
 
 
 @pytest_asyncio.fixture(scope="session")

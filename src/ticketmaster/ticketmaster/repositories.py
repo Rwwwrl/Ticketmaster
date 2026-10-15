@@ -3,6 +3,7 @@ from uuid import UUID
 
 from libs.taskiq_ext.schemas.task_messages import BaseTaskMessage
 from sqlalchemy import ARRAY, BigInteger, and_, any_, bindparam, delete, func, or_, tuple_, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -10,7 +11,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from ticketmaster.cursors import EventDBCursorDTO
 from ticketmaster.enums import EventSortKeyEnum, TicketStatusEnum
 from ticketmaster.exceptions import EventNotFoundException, UserNotFoundException
-from ticketmaster.models import Event, OutboxMessage, Ticket, User
+from ticketmaster.models import Event, InboxMessage, OutboxMessage, Ticket, User
 from ticketmaster.schemas.dtos import BaseEventDTO, BaseTicketDTO, BaseUserDTO, OutboxMessageDTO
 
 _SORT_KEY_TO_POSTGRES_COLUMN: dict[EventSortKeyEnum, InstrumentedAttribute] = {
@@ -285,3 +286,21 @@ class OutboxRepository:
 
         ids_param = bindparam("ids", value=ids, type_=ARRAY(BigInteger))
         await session.exec(delete(OutboxMessage).where(OutboxMessage.id == any_(ids_param)))
+
+
+class InboxRepository:
+    @classmethod
+    async def try_add(cls, session: AsyncSession, message: BaseTaskMessage) -> bool:
+        result = await session.exec(
+            insert(InboxMessage)
+            .values(code=message.code, logical_id=message.logical_id)
+            .on_conflict_do_nothing(index_elements=[InboxMessage.logical_id, InboxMessage.code])
+            .returning(InboxMessage.id)
+        )
+        return result.first() is not None
+
+    @classmethod
+    async def delete_older_than(cls, session: AsyncSession, older_than: timedelta, limit: int) -> int:
+        expired_ids = select(InboxMessage.id).where(InboxMessage.created_at < func.now() - older_than).limit(limit)
+        result = await session.exec(delete(InboxMessage).where(InboxMessage.id.in_(expired_ids)))
+        return result.rowcount

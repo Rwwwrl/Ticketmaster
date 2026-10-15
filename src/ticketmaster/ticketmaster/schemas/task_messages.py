@@ -15,3 +15,7 @@ class DeleteCognitoUserTaskMessage(BaseTaskMessage):
 
     pool_id: str
     cognito_username: str
+
+
+class CleanupInboxTaskMessage(BaseTaskMessage):
+    code: ClassVar[int] = 102

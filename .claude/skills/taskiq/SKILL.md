@@ -10,7 +10,7 @@ Background tasks run on TaskIQ over RabbitMQ (`taskiq-aio-pika` 0.6.x, whose API
 ## Layout
 
 - `libs/taskiq_ext/`: `settings.py` (`TaskIQSettingsMixin`, one field `rabbitmq_url`), `middlewares.py`, and the schema-free outbox pieces: `schemas/task_messages.py` (`BaseTaskMessage`) and `utils.py` (`build_task_registry`). The `outbox_message` table, `OutboxMessageDTO`, `OutboxRepository` and the relay are service code: each service owns its outbox table and migration (`ticketmaster/models.py`, `schemas/dtos.py`, `repositories.py`), because libs must not ship tables into a service's metadata.
-- `ticketmaster/background_tasks/main.py`: the `broker`, middlewares and the `WORKER_STARTUP` / `WORKER_SHUTDOWN` hooks. `tasks.py`: task definitions; the worker CLI imports it. `utils.py`: `relay_batch` (one locked batch) and `sleep_or_stop`. `outbox_relay.py`: the relay process entry point, which owns the polling loop, the backoff and the SIGTERM/SIGINT stop event.
+- `ticketmaster/background_tasks/main.py`: the `broker`, middlewares and the `WORKER_STARTUP` / `WORKER_SHUTDOWN` hooks. `tasks.py`: task definitions; the worker CLI imports it. `utils.py`: `relay_batch` (one locked batch) and `sleep_or_stop`. `outbox_relay.py`: the relay process entry point, which owns the polling loop, the backoff and the SIGTERM/SIGINT stop event. `scheduler.py`: the `TaskiqScheduler` entry point.
 - `ticketmaster/schemas/task_messages.py`: the concrete task messages (`DeleteS3ObjectTaskMessage` code `100`, `DeleteCognitoUserTaskMessage` code `101`).
 - `src/rabbitmq_topology/`: its own project and image, used only by the topology Job. `resources.py` declares every exchange, queue and binding as module-level taskiq-aio-pika `Exchange`/`Queue` objects grouped into `EXCHANGES`, `DEAD_LETTER_QUEUES`, `QUEUES`, `DELAY_QUEUES` and `BINDINGS` (`schemas.RabbitMQBinding`); `apply.py` is the Job's entry point. Nothing else depends on it.
 - Do not add settings named `rabbitmq_port` or `rabbitmq_service_host`: the Kubernetes Service `rabbitmq` injects `RABBITMQ_PORT` / `RABBITMQ_SERVICE_HOST` into pods that keep service links on.
@@ -39,6 +39,29 @@ A side effect that must follow a DB commit (an S3 or Cognito call, a cache purge
 - **Unroutable messages are not guarded.** If the `default` → `default` binding (or the queue) is removed by hand while the relay runs, RabbitMQ acks the publish, the stock `AioPikaBroker` ignores the returned message, and the relay deletes the row. Never remove the binding by hand; every process start re-asserts it. The fix, if it ever bites, is to reopen the write channel with `on_return_raises=True`.
 - **No ordering, at least once.** Tasks must tolerate duplicates and reordering. No probes: a dead process is restarted by the kubelet, and the relay serves no traffic.
 
+## Inbox and scheduler
+
+The outbox and the broker deliver at least once, so every message-driven task dedupes through the inbox.
+
+| | `request_id` | `logical_id` | TaskIQ `task_id` |
+|---|---|---|---|
+| What | trace id | idempotency key of one message | transport id |
+| Origin | `RequestIdMiddleware` (always a UUID) | the producer; in a request, the request id | `str(logical_id)`, set by the relay |
+| Dedupe | no | yes, with `code` | no |
+
+- **Task pattern.** The task owns its `SessionPrimary` transaction and `InboxRepository.try_add` is its first statement; on `False` (duplicate) log INFO and return. Explicit, no decorator:
+  ```python
+  async with SessionPrimary() as session, session.begin():
+      if not await InboxRepository.try_add(session=session, message=body):
+          _logger.info("Skipping duplicate code=%s logical_id=%s", body.code, body.logical_id)
+          return
+      ...side effects
+  ```
+- **Guarantees.** Postgres writes in the transaction are exactly once (they commit with the inbox row; a failing task rolls the row back so the retry reprocesses). External calls are at least once, so they must be idempotent.
+- **Chains** (task A enqueues B) use `uuid4()` for B's `logical_id`.
+- **Retention.** `cleanup_inbox` (cron `0 3 * * *`) deletes rows older than 14 days in batches of 10 000. It takes a `CleanupInboxTaskMessage` (code `102`) like every task; the scheduler source fills a fresh `uuid4` `logical_id` into the body on every tick (`ScheduleSource.pre_send`). It skips the inbox: it is idempotent.
+- **Scheduler.** `scheduler.py` builds `TaskiqScheduler(broker=broker, sources=[LabelScheduleSource(async_shared_broker)])`: the source must be `async_shared_broker`, otherwise it silently finds no schedules. Logging/Sentry are set up in its `CLIENT_STARTUP` hook. Run exactly one replica with `Recreate` (`just runscheduler` locally).
+
 ## Worker CLI
 
 ```
@@ -62,4 +85,5 @@ poetry run taskiq worker ticketmaster.background_tasks.main:broker ticketmaster.
 - The `taskiq_broker` session fixture (`libs.tests_ext.taskiq_fixtures`, loaded via root `addopts`) installs an `InMemoryBroker` as the shared broker's default; use it to run tasks without RabbitMQ.
 - `rabbitmq_topology` tests run against a real RabbitMQ (docker compose locally, a service container in CI; the deployed broker is managed) and re-apply the topology on teardown.
 - Run pytest from the repo root. Under `src/ticketmaster` the nested pytest config shadows the root `env` block; when the paths are all under `src/ticketmaster`, pass `-c pyproject.toml`.
+- Inbox tests: `tests/test_inbox_repository.py` (incl. the concurrent-duplicate cases), the duplicate/failure cases in each task test, and `test_cleanup_inbox.py`. DB-touching tests must request `sqlmodel_primary_engine`, or `autocleared_sqlmodel_tables` is not truncated afterwards.
 - Outbox tests: the producers are covered by the delete-event and delete-me route tests, and the tasks by their own task tests. `BaseTaskMessage`, `build_task_registry`, `relay_batch` and the relay loop have no dedicated tests; the relay is checked on test-eu. The shared `mock_s3` / `mock_cognito` fixtures live in `ticketmaster/tests/conftest.py`; tasks run through the `taskiq_broker` fixture.
