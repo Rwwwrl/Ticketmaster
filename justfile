@@ -15,6 +15,10 @@ runworker:
     poetry -C src/ticketmaster run taskiq worker ticketmaster.background_tasks.main:broker ticketmaster.background_tasks.tasks --workers 1 --max-async-tasks 10 --wait-tasks-timeout 65 --shutdown-timeout 10 --no-configure-logging
 
 [group('run')]
+runrelay:
+    poetry -C src/ticketmaster run python -m ticketmaster.background_tasks.outbox_relay
+
+[group('run')]
 rabbitmq-topology:
     poetry -C src/rabbitmq_topology run python -m rabbitmq_topology.apply
 

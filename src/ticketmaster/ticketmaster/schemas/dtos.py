@@ -1,13 +1,13 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Self
+from typing import Any, Self
 from uuid import UUID
 
 from libs.common.schemas.dto import DTO
 from pydantic import model_validator
 
 from ticketmaster.enums import CurrencyEnum, EventTypeEnum, TicketStatusEnum
-from ticketmaster.models import Event, Ticket, User
+from ticketmaster.models import Event, OutboxMessage, Ticket, User
 from ticketmaster.redis_cache.cache_documents import EventCacheDocument
 from ticketmaster.utils import event_validate
 
@@ -63,4 +63,14 @@ class BaseUserDTO(DTO):
 
     @classmethod
     def from_sqlmodel(cls, model: User) -> Self:
+        return cls(**model.model_dump())
+
+
+class OutboxMessageDTO(DTO):
+    id: int
+    code: int
+    message: dict[str, Any]
+
+    @classmethod
+    def from_sqlmodel(cls, model: OutboxMessage) -> Self:
         return cls(**model.model_dump())

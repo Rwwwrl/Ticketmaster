@@ -76,6 +76,8 @@ services:
     backgroundTasks:
       worker:
         replicas: 1
+      outboxRelay:
+        replicas: 2
     migrations:
       expand:
         meta:

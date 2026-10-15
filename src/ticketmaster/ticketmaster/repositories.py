@@ -1,7 +1,8 @@
 from datetime import timedelta
 from uuid import UUID
 
-from sqlalchemy import and_, delete, func, or_, tuple_, update
+from libs.taskiq_ext.schemas.task_messages import BaseTaskMessage
+from sqlalchemy import ARRAY, BigInteger, and_, any_, bindparam, delete, func, or_, tuple_, update
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -9,8 +10,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from ticketmaster.cursors import EventDBCursorDTO
 from ticketmaster.enums import EventSortKeyEnum, TicketStatusEnum
 from ticketmaster.exceptions import EventNotFoundException, UserNotFoundException
-from ticketmaster.models import Event, Ticket, User
-from ticketmaster.schemas.dtos import BaseEventDTO, BaseTicketDTO, BaseUserDTO
+from ticketmaster.models import Event, OutboxMessage, Ticket, User
+from ticketmaster.schemas.dtos import BaseEventDTO, BaseTicketDTO, BaseUserDTO, OutboxMessageDTO
 
 _SORT_KEY_TO_POSTGRES_COLUMN: dict[EventSortKeyEnum, InstrumentedAttribute] = {
     EventSortKeyEnum.START_AT: Event.start_at,
@@ -262,3 +263,25 @@ class UserRepository:
     @classmethod
     async def delete_by_id(cls, session: AsyncSession, user_id: int) -> None:
         await session.exec(delete(User).where(User.id == user_id))
+
+
+class OutboxRepository:
+    @classmethod
+    async def add(cls, session: AsyncSession, message: BaseTaskMessage) -> None:
+        session.add(OutboxMessage(code=message.code, message=message.model_dump(mode="json")))
+        await session.flush()
+
+    @classmethod
+    async def lock_batch(cls, session: AsyncSession, limit: int) -> list[OutboxMessageDTO]:
+        result = await session.exec(
+            select(OutboxMessage).order_by(OutboxMessage.id).limit(limit).with_for_update(skip_locked=True)
+        )
+        return [OutboxMessageDTO.from_sqlmodel(model=model) for model in result.all()]
+
+    @classmethod
+    async def delete_by_ids(cls, session: AsyncSession, ids: list[int]) -> None:
+        if not ids:
+            return
+
+        ids_param = bindparam("ids", value=ids, type_=ARRAY(BigInteger))
+        await session.exec(delete(OutboxMessage).where(OutboxMessage.id == any_(ids_param)))

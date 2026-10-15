@@ -1,12 +1,12 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Self
+from typing import Any, Self
 from uuid import UUID
 
 from libs.sqlmodel_ext import BaseSqlModel, EnumString
 from pydantic import model_validator
-from sqlalchemy import Column, Computed, DateTime, Identity, Index, Integer, Numeric, PrimaryKeyConstraint
-from sqlalchemy.dialects.postgresql import TSVECTOR
+from sqlalchemy import BigInteger, Column, Computed, DateTime, Identity, Index, Integer, Numeric, PrimaryKeyConstraint
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlmodel import Field
 
 from ticketmaster.enums import CurrencyEnum, EventTypeEnum, TicketStatusEnum
@@ -79,3 +79,12 @@ class Ticket(BaseSqlModel, table=True):
     status: TicketStatusEnum = Field(sa_type=EnumString(TicketStatusEnum))
     reserved_at: datetime | None = Field(sa_type=DateTime(timezone=True))
     booked_at: datetime | None = Field(sa_type=DateTime(timezone=True))
+
+
+class OutboxMessage(BaseSqlModel, table=True):
+    __tablename__ = "outbox_message"
+    __table_args__ = (PrimaryKeyConstraint("id"),)
+
+    id: int | None = Field(default=None, sa_column=Column(BigInteger, Identity()))
+    code: int
+    message: dict[str, Any] = Field(sa_type=JSONB)

@@ -1,21 +1,22 @@
 """Endpoint contract tests for DELETE /api/v1/me/. Auth dependency is bypassed via dependency_overrides;
-Cognito client is monkey-patched on the shared aws_session singleton."""
+Cognito deletion is handed to the outbox, so no Cognito call is made by the route."""
 
 from collections.abc import AsyncIterator
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import AsyncClient
-from libs.aws.session import aws_session
+from libs.fastapi_ext.consts import REQUEST_ID_HEADER
 from libs.sqlmodel_ext import SessionPrimary
 from sqlmodel import select
 from ticketmaster.enums import TicketStatusEnum
 from ticketmaster.http.v1.dependencies import validate_user_jwt
-from ticketmaster.models import Ticket, User
+from ticketmaster.models import OutboxMessage, Ticket, User
 from ticketmaster.schemas.dtos import BaseUserDTO
+from ticketmaster.schemas.task_messages import DeleteCognitoUserTaskMessage
 from ticketmaster.tests.factories import EventFactory, TicketFactory, UserFactory
 
 
@@ -31,18 +32,6 @@ async def signed_in_user_in_db(fastapi_app: FastAPI) -> AsyncIterator[BaseUserDT
     fastapi_app.dependency_overrides[validate_user_jwt] = lambda: dto
     yield dto
     fastapi_app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def mock_cognito(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
-    cognito = AsyncMock()
-    cognito.exceptions.UserNotFoundException = type("UserNotFoundException", (Exception,), {})
-
-    cm = MagicMock()
-    cm.__aenter__ = AsyncMock(return_value=cognito)
-    cm.__aexit__ = AsyncMock(return_value=None)
-    monkeypatch.setattr(aws_session, "client", MagicMock(return_value=cm))
-    return cognito
 
 
 async def _seed_ticket(*, user_id: int, status_: TicketStatusEnum) -> int:
@@ -74,21 +63,25 @@ async def test_delete_me_when_no_tickets_returns_204_and_deletes_user(
     response = await async_client.delete(url="/api/v1/me/", headers={"Authorization": "Bearer fake"})
 
     assert response.status_code == 204
-    mock_cognito.admin_delete_user.assert_awaited_once_with(
-        UserPoolId=signed_in_user_in_db.pool_id,
-        Username=signed_in_user_in_db.cognito_username,
-    )
+    mock_cognito.admin_delete_user.assert_not_awaited()
 
     async with SessionPrimary() as session, session.begin():
         result = await session.exec(select(User).where(User.id == signed_in_user_in_db.id))
         assert result.first() is None
+        [outbox_message] = (await session.exec(select(OutboxMessage))).all()
+        session.expunge_all()
+
+    assert outbox_message.code == DeleteCognitoUserTaskMessage.code
+    delete_message = DeleteCognitoUserTaskMessage.model_validate(outbox_message.message)
+    assert str(delete_message.logical_id) == response.headers[REQUEST_ID_HEADER]
+    assert delete_message.pool_id == signed_in_user_in_db.pool_id
+    assert delete_message.cognito_username == signed_in_user_in_db.cognito_username
 
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_delete_me_when_user_has_reserved_tickets_releases_them(
     async_client: AsyncClient,
     signed_in_user_in_db: BaseUserDTO,
-    mock_cognito: AsyncMock,
 ) -> None:
     ticket_id = await _seed_ticket(user_id=signed_in_user_in_db.id, status_=TicketStatusEnum.RESERVED)
 
@@ -106,7 +99,6 @@ async def test_delete_me_when_user_has_reserved_tickets_releases_them(
 async def test_delete_me_when_user_has_booked_tickets_marks_anonymous_booked(
     async_client: AsyncClient,
     signed_in_user_in_db: BaseUserDTO,
-    mock_cognito: AsyncMock,
 ) -> None:
     ticket_id = await _seed_ticket(user_id=signed_in_user_in_db.id, status_=TicketStatusEnum.BOOKED)
 

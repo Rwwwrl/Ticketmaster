@@ -61,15 +61,21 @@ async def test_request_id_middleware_when_header_provided(async_client: AsyncCli
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_request_id_middleware_when_valid_non_uuid_format(async_client: AsyncClient) -> None:
-    provided_id = "trace-abc-123"
-    response = await async_client.get(url="/echo-request-id", headers={REQUEST_ID_HEADER: provided_id})
+async def test_request_id_middleware_when_non_uuid_format(async_client: AsyncClient) -> None:
+    response = await async_client.get(url="/echo-request-id", headers={REQUEST_ID_HEADER: "trace-abc-123"})
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Invalid X-Request-ID header"}
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_request_id_middleware_when_uppercase_uuid_normalizes_to_lowercase(async_client: AsyncClient) -> None:
+    provided_id = uuid.uuid4()
+    response = await async_client.get(url="/echo-request-id", headers={REQUEST_ID_HEADER: str(provided_id).upper()})
 
     assert response.status_code == 200
-    assert response.headers[REQUEST_ID_HEADER] == provided_id
-
-    body = response.json()
-    assert body["request_id"] == provided_id
+    assert response.headers[REQUEST_ID_HEADER] == str(provided_id)
+    assert response.json()["request_id"] == str(provided_id)
 
 
 @pytest.mark.asyncio(loop_scope="session")
